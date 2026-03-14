@@ -1,0 +1,107 @@
+name: Build OnePersonClaw
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install customtkinter pyinstaller
+
+      - name: Build EXE
+        run: |
+          pyinstaller --onefile --windowed `
+            --name "OnePersonClaw" `
+            --icon "assets/logo.ico" `
+            main.py
+        continue-on-error: false
+
+      - name: Upload Windows EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: OnePersonClaw-Windows
+          path: dist/OnePersonClaw.exe
+
+  build-linux:
+    name: Build Linux Binary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        run: sudo apt-get install -y python3-tk
+
+      - name: Install dependencies
+        run: pip install customtkinter pyinstaller
+
+      - name: Build Linux Binary
+        run: |
+          pyinstaller --onefile \
+            --name "OnePersonClaw-linux" \
+            main.py
+
+      - name: Upload Linux Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: OnePersonClaw-Linux
+          path: dist/OnePersonClaw-linux
+
+  release:
+    name: Create Release
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download Windows EXE
+        uses: actions/download-artifact@v4
+        with:
+          name: OnePersonClaw-Windows
+          path: ./release
+
+      - name: Download Linux Binary
+        uses: actions/download-artifact@v4
+        with:
+          name: OnePersonClaw-Linux
+          path: ./release
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "OnePersonClaw ${{ github.ref_name }}"
+          body: |
+            ## 🦞 OnePersonClaw ${{ github.ref_name }}
+
+            一个人，一套爪子，干掉一个团队
+
+            ### 下载
+            - **Windows**: `OnePersonClaw.exe` — 直接双击运行
+            - **Linux**: `OnePersonClaw-linux` — `chmod +x` 后运行
+
+            ### 更新内容
+            见 Commits 记录
+
+            ---
+            by 常云举
+          files: |
+            release/OnePersonClaw.exe
+            release/OnePersonClaw-linux
+          draft: false
+          prerelease: false
