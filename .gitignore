@@ -5,3 +5,5 @@ __pycache__/
 *.spec
 config.json
 *.pyc
+backend/node_modules/
+backend/.env
