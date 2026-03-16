@@ -2,12 +2,17 @@ import customtkinter as ctk
 import subprocess
 import json
 import os
+import sys
+import shutil
 import threading
 import urllib.request
+import webbrowser
+import tkinter.filedialog as filedialog
+import tkinter.messagebox as messagebox
 
 # ── 常量 ─────────────────────────────────────────────────────
-VERSION = "1.2.0"
-UPDATE_URL = "https://raw.githubusercontent.com/OnePersonClaw/releases/main/version.json"
+VERSION = "1.4.0"
+UPDATE_URL = "https://raw.githubusercontent.com/chatgpt-yunju/OnePersonClaw/main/version.json"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
 MODELS = {
@@ -61,7 +66,7 @@ MODELS = {
 
 SCENES = {
     "通用助手": {
-        "prompt": "你是一个全能AI助手，帮助用户完成各类任务。",
+        "prompt": "你是一个全能AI助手，帮��用户完成各类任务。",
         "desc": "日常问答、分析、写作",
     },
     "流量获客": {
@@ -116,7 +121,7 @@ SCENES = {
             "- 分析用户的不可替代能力\n"
             "- 设计个人IP定位和变现路径\n"
             "- 推荐适合当前阶段的AI工具组合\n"
-            "- 用OpenClaw搭建个人自动化系统\n\n"
+            "- ��OpenClaw搭建个人自动化系统\n\n"
             "风格：直接、务实、不废话，永远站在创业者那边。"
         ),
         "desc": "个人IP定位、AI工具选择、超级个体打造",
@@ -133,9 +138,12 @@ class OnePersonClaw(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title(f"OnePersonClaw v{VERSION} — 一个人的AI爪子")
-        self.geometry("760x620")
+        self.geometry("760x700")
         self.resizable(False, False)
         self.process = None
+        # 每个模型独立存储 key 和 base_url
+        self.models_config = {name: {"api_key": "", "base_url": m.get("base_url", "")}
+                              for name, m in MODELS.items()}
         self._build_ui()
         self._load_config()
         self._check_update_async()
@@ -220,264 +228,476 @@ class OnePersonClaw(ctk.CTk):
 
         # 按钮区
         btn_frame = ctk.CTkFrame(self, fg_color="transparent")
-        btn_frame.pack(pady=(0, 18))
+        btn_frame.pack(pady=(0, 6))
 
         self.launch_btn = ctk.CTkButton(
             btn_frame, text="🚀 一键启动",
-            command=self._launch, width=180, height=44,
+            command=self._launch, width=160, height=44,
             font=ctk.CTkFont(size=15, weight="bold")
         )
-        self.launch_btn.pack(side="left", padx=8)
+        self.launch_btn.pack(side="left", padx=6)
 
         ctk.CTkButton(
             btn_frame, text="⏹ 停止",
-            command=self._stop, width=100, height=44,
+            command=self._stop, width=90, height=44,
             fg_color="#555", hover_color="#333",
             font=ctk.CTkFont(size=14)
-        ).pack(side="left", padx=8)
+        ).pack(side="left", padx=6)
 
         ctk.CTkButton(
             btn_frame, text="💾 保存",
-            command=self._save_config, width=100, height=44,
+            command=self._save_config, width=90, height=44,
             fg_color="#2a7a2a", hover_color="#1a5a1a",
             font=ctk.CTkFont(size=14)
-        ).pack(side="left", padx=8)
+        ).pack(side="left", padx=6)
+
+        ctk.CTkButton(
+            btn_frame, text="📦 安装",
+            command=self._install_openclaw, width=90, height=44,
+            fg_color="#5a3a7a", hover_color="#3a1a5a",
+            font=ctk.CTkFont(size=14)
+        ).pack(side="left", padx=6)
+
+        # 配置导入/导出按钮区
+        cfg_frame = ctk.CTkFrame(self, fg_color="transparent")
+        cfg_frame.pack(pady=(2, 6))
+
+        ctk.CTkButton(
+            cfg_frame, text="📤 导出配置",
+            command=self._export_config, width=120, height=32,
+            fg_color="#333", hover_color="#444",
+            font=ctk.CTkFont(size=12)
+        ).pack(side="left", padx=6)
+
+        ctk.CTkButton(
+            cfg_frame, text="📥 导入配置",
+            command=self._import_config, width=120, height=32,
+            fg_color="#333", hover_color="#444",
+            font=ctk.CTkFont(size=12)
+        ).pack(side="left", padx=6)
+
+        # 页脚
+        footer = ctk.CTkFrame(self, fg_color="transparent")
+        footer.pack(pady=(2, 10))
+
+        ctk.CTkLabel(
+            footer, text="QQ交流群：665889946",
+            font=ctk.CTkFont(size=11), text_color="#666"
+        ).pack(side="left", padx=10)
+
+        ctk.CTkLabel(footer, text="|", font=ctk.CTkFont(size=11), text_color="#444").pack(side="left")
+
+        cc_link = ctk.CTkLabel(
+            footer, text="CC Club",
+            font=ctk.CTkFont(size=11), text_color="#4a9eff", cursor="hand2"
+        )
+        cc_link.pack(side="left", padx=10)
+        cc_link.bind("<Button-1>", lambda e: webbrowser.open("https://ccclub.ai"))
+
+        ctk.CTkLabel(footer, text="|", font=ctk.CTkFont(size=11), text_color="#444").pack(side="left")
+
+        yj_link = ctk.CTkLabel(
+            footer, text="yunjunet.cn",
+            font=ctk.CTkFont(size=11), text_color="#4a9eff", cursor="hand2"
+        )
+        yj_link.pack(side="left", padx=10)
+        yj_link.bind("<Button-1>", lambda e: webbrowser.open("https://yunjunet.cn"))
+
+        ctk.CTkLabel(footer, text="|", font=ctk.CTkFont(size=11), text_color="#444").pack(side="left")
+
+        plan_link = ctk.CTkLabel(
+            footer, text="PlanNet",
+            font=ctk.CTkFont(size=11), text_color="#4a9eff", cursor="hand2"
+        )
+        plan_link.pack(side="left", padx=10)
+        plan_link.bind("<Button-1>", lambda e: webbrowser.open("https://plannet.yunjunet.cn"))
+
+        ctk.CTkLabel(footer, text="|", font=ctk.CTkFont(size=11), text_color="#444").pack(side="left")
+
+        ppt_link = ctk.CTkLabel(
+            footer, text="AI PPT",
+            font=ctk.CTkFont(size=11), text_color="#4a9eff", cursor="hand2"
+        )
+        ppt_link.pack(side="left", padx=10)
+        ppt_link.bind("<Button-1>", lambda e: webbrowser.open("https://aippt.yunjunet.cn"))
 
     def _build_left(self, parent):
         left = ctk.CTkFrame(parent, fg_color="transparent")
-        left.pack(side="left", fill="both", expand=True, padx=(16, 8), pady=16)
+        left.pack(side="left", fill="both", expand=True, padx=(0, 10))
 
-        # 模型
-        ctk.CTkLabel(left, text="选择模型", font=ctk.CTkFont(weight="bold")).pack(anchor="w")
+        ctk.CTkLabel(
+            left, text="选择模型",
+            font=ctk.CTkFont(size=13, weight="bold")
+        ).pack(anchor="w", pady=(8, 2))
+
         self.model_var = ctk.StringVar(value=list(MODELS.keys())[0])
-        ctk.CTkOptionMenu(
+        self.model_menu = ctk.CTkOptionMenu(
             left, values=list(MODELS.keys()),
-            variable=self.model_var, width=280,
-            command=self._on_model_change
-        ).pack(anchor="w", pady=(4, 14))
+            variable=self.model_var,
+            command=self._on_model_change,
+            width=220, font=ctk.CTkFont(size=13)
+        )
+        self.model_menu.pack(anchor="w", pady=(0, 8))
 
-        # API Key
-        ctk.CTkLabel(left, text="API Key", font=ctk.CTkFont(weight="bold")).pack(anchor="w")
+        ctk.CTkLabel(
+            left, text="API Key",
+            font=ctk.CTkFont(size=13, weight="bold")
+        ).pack(anchor="w", pady=(0, 2))
+
         self.api_key_entry = ctk.CTkEntry(
-            left, width=280, show="●", placeholder_text="输入你的 API Key"
+            left, width=220, show="*",
+            placeholder_text="输入 API Key",
+            font=ctk.CTkFont(size=12)
         )
-        self.api_key_entry.pack(anchor="w", pady=(4, 4))
+        self.api_key_entry.pack(anchor="w", pady=(0, 8))
 
-        self.show_key_var = ctk.BooleanVar(value=False)
-        ctk.CTkCheckBox(
-            left, text="显示 Key", variable=self.show_key_var,
-            command=self._toggle_key, font=ctk.CTkFont(size=12)
-        ).pack(anchor="w", pady=(0, 14))
+        ctk.CTkLabel(
+            left, text="Base URL（可选）",
+            font=ctk.CTkFont(size=13, weight="bold")
+        ).pack(anchor="w", pady=(0, 2))
 
-        # Base URL
-        ctk.CTkLabel(left, text="Base URL（可选）", font=ctk.CTkFont(weight="bold")).pack(anchor="w")
         self.base_url_entry = ctk.CTkEntry(
-            left, width=280, placeholder_text="默认官方接口"
+            left, width=220,
+            placeholder_text="自定义 API 地址",
+            font=ctk.CTkFont(size=12)
         )
-        self.base_url_entry.pack(anchor="w", pady=(4, 0))
+        self.base_url_entry.pack(anchor="w", pady=(0, 8))
+
+        ctk.CTkLabel(
+            left, text="选择场景",
+            font=ctk.CTkFont(size=13, weight="bold")
+        ).pack(anchor="w", pady=(0, 2))
+
+        self.scene_var = ctk.StringVar(value=list(SCENES.keys())[0])
+        self.scene_menu = ctk.CTkOptionMenu(
+            left, values=list(SCENES.keys()),
+            variable=self.scene_var,
+            command=self._on_scene_change,
+            width=220, font=ctk.CTkFont(size=13)
+        )
+        self.scene_menu.pack(anchor="w", pady=(0, 4))
+
+        self.scene_desc_label = ctk.CTkLabel(
+            left, text="", wraplength=210,
+            font=ctk.CTkFont(size=11), text_color="#888"
+        )
+        self.scene_desc_label.pack(anchor="w", pady=(0, 8))
+        self._on_scene_change(self.scene_var.get())
 
     def _build_right(self, parent):
         right = ctk.CTkFrame(parent, fg_color="transparent")
-        right.pack(side="right", fill="both", padx=(8, 16), pady=16)
+        right.pack(side="left", fill="both", expand=True)
 
-        ctk.CTkLabel(right, text="场景模板", font=ctk.CTkFont(weight="bold")).pack(anchor="w")
+        ctk.CTkLabel(
+            right, text="端口",
+            font=ctk.CTkFont(size=13, weight="bold")
+        ).pack(anchor="w", pady=(8, 2))
 
-        self.scene_var = ctk.StringVar(value=list(SCENES.keys())[0])
-        for name, info in SCENES.items():
-            row = ctk.CTkFrame(right, fg_color="transparent")
-            row.pack(anchor="w", pady=2)
-            ctk.CTkRadioButton(
-                row, text=name, value=name, variable=self.scene_var,
-                command=self._on_scene_change, font=ctk.CTkFont(size=12)
-            ).pack(side="left")
-            ctk.CTkLabel(
-                row, text=f"  {info['desc']}",
-                font=ctk.CTkFont(size=10), text_color="#666"
-            ).pack(side="left")
+        self.port_entry = ctk.CTkEntry(
+            right, width=120,
+            placeholder_text="8080",
+            font=ctk.CTkFont(size=12)
+        )
+        self.port_entry.pack(anchor="w", pady=(0, 8))
+        self.port_entry.insert(0, "8080")
 
-    # ── 事件处理 ──────────────────────────────────────────────
+        ctk.CTkLabel(
+            right, text="并发数",
+            font=ctk.CTkFont(size=13, weight="bold")
+        ).pack(anchor="w", pady=(0, 2))
 
-    def _toggle_key(self):
-        self.api_key_entry.configure(show="" if self.show_key_var.get() else "●")
+        self.concurrency_entry = ctk.CTkEntry(
+            right, width=120,
+            placeholder_text="4",
+            font=ctk.CTkFont(size=12)
+        )
+        self.concurrency_entry.pack(anchor="w", pady=(0, 8))
+        self.concurrency_entry.insert(0, "4")
+
+        ctk.CTkLabel(
+            right, text="超时（秒）",
+            font=ctk.CTkFont(size=13, weight="bold")
+        ).pack(anchor="w", pady=(0, 2))
+
+        self.timeout_entry = ctk.CTkEntry(
+            right, width=120,
+            placeholder_text="60",
+            font=ctk.CTkFont(size=12)
+        )
+        self.timeout_entry.pack(anchor="w", pady=(0, 8))
+        self.timeout_entry.insert(0, "60")
+
+        ctk.CTkLabel(
+            right, text="日志",
+            font=ctk.CTkFont(size=13, weight="bold")
+        ).pack(anchor="w", pady=(0, 2))
+
+        self.log_box = ctk.CTkTextbox(
+            right, height=120, width=260,
+            font=ctk.CTkFont(size=11)
+        )
+        self.log_box.pack(anchor="w", pady=(0, 8))
+        self.log_box.configure(state="disabled")
+
+    # ─�� 事件处理 ──────────────────────────────────────────────
+
+    def _on_model_change(self, name):
+        cfg = self.models_config.get(name, {})
+        self.api_key_entry.delete(0, "end")
+        self.api_key_entry.insert(0, cfg.get("api_key", ""))
+        self.base_url_entry.delete(0, "end")
+        self.base_url_entry.insert(0, cfg.get("base_url", ""))
+        self._update_cost(self.usage_var.get())
+
+    def _on_scene_change(self, name):
+        scene = SCENES.get(name, {})
+        self.scene_desc_label.configure(text=scene.get("desc", ""))
+        self._update_prompt_preview()
+
+    def _update_prompt_preview(self):
+        scene = SCENES.get(self.scene_var.get(), {})
+        prompt = scene.get("prompt", "")
+        preview = prompt[:120] + "..." if len(prompt) > 120 else prompt
+        self.prompt_box.configure(state="normal")
+        self.prompt_box.delete("1.0", "end")
+        self.prompt_box.insert("1.0", preview)
+        self.prompt_box.configure(state="disabled")
+
+    def _update_cost(self, level):
+        model_name = self.model_var.get()
+        model = MODELS.get(model_name, {})
+        price = model.get("price", {})
+        multiplier = {"轻度使用": 0.5, "正常使用": 1.0, "重度使用": 2.5}.get(level, 1.0)
+        input_cost = price.get("input", 0) * multiplier
+        output_cost = price.get("output", 0) * multiplier
+        total = input_cost + output_cost
+        self.cost_label.configure(text=f"≈ ¥{total:.2f} / 月")
+
+    def _log(self, msg):
+        self.log_box.configure(state="normal")
+        self.log_box.insert("end", msg + "\n")
+        self.log_box.see("end")
+        self.log_box.configure(state="disabled")
 
     def _set_status(self, text, color="#888"):
         self.status_label.configure(text=text, text_color=color)
 
-    def _on_model_change(self, _=None):
-        self._update_cost()
-        model_info = MODELS[self.model_var.get()]
-        default_url = model_info.get("base_url", "")
-        self.base_url_entry.delete(0, "end")
-        if default_url:
-            self.base_url_entry.insert(0, default_url)
-
-    def _on_scene_change(self):
-        scene = self.scene_var.get()
-        prompt = SCENES[scene]["prompt"]
-        self.prompt_box.configure(state="normal")
-        self.prompt_box.delete("1.0", "end")
-        self.prompt_box.insert("1.0", prompt)
-        self.prompt_box.configure(state="disabled")
-
-    def _update_cost(self, _=None):
-        model_info = MODELS[self.model_var.get()]
-        level = self.usage_var.get()
-        cost_map = {
-            "轻度使用": model_info["cost_light"],
-            "正常使用": model_info["cost_normal"],
-            "重度使用": model_info["cost_heavy"],
-        }
-        self.cost_label.configure(text=f"≈ {cost_map[level]} / 月")
-
-    # ── 启动/停止 ─────────────────────────────────────────────
+    # ── 核心功能 ──────────────────────────────────────────────
 
     def _launch(self):
-        api_key = self.api_key_entry.get().strip()
         model_name = self.model_var.get()
-        model_info = MODELS[model_name]
+        api_key = self.api_key_entry.get().strip()
+        base_url = self.base_url_entry.get().strip()
+        port = self.port_entry.get().strip() or "8080"
+        concurrency = self.concurrency_entry.get().strip() or "4"
+        timeout = self.timeout_entry.get().strip() or "60"
         scene = self.scene_var.get()
 
-        if model_info["key"] != "ollama" and not api_key:
-            self._set_status("⚠ 请输入 API Key", "#e05050")
+        if not api_key:
+            messagebox.showwarning("缺少 API Key", "请先填写 API Key")
             return
 
-        self._save_config()
-        self._set_status(f"● 启动中 [{model_name} | {scene}]...", "#f0a020")
-        self.launch_btn.configure(state="disabled")
+        self.models_config[model_name]["api_key"] = api_key
+        self.models_config[model_name]["base_url"] = base_url
+
+        model_info = MODELS.get(model_name, {})
+        model_id = model_info.get("id", model_name)
+        scene_prompt = SCENES.get(scene, {}).get("prompt", "")
+        effective_base_url = base_url or model_info.get("base_url", "")
 
         env = os.environ.copy()
-        env[model_info["env_key"]] = api_key or "ollama"
+        env["API_KEY"] = api_key
+        env["MODEL"] = model_id
+        env["PORT"] = port
+        env["CONCURRENCY"] = concurrency
+        env["TIMEOUT"] = timeout
+        env["SYSTEM_PROMPT"] = scene_prompt
+        if effective_base_url:
+            env["BASE_URL"] = effective_base_url
 
-        base_url = self.base_url_entry.get().strip() or model_info.get("base_url", "")
-        if base_url:
-            env["OPENAI_BASE_URL"] = base_url
+        try:
+            self.process = subprocess.Popen(
+                ["openclaw", "--port", port, "--concurrency", concurrency, "--timeout", timeout],
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
+            self._set_status(f"● 运行中 | {model_name} | 端口 {port}", "#50c0ff")
+            self.launch_btn.configure(fg_color="#1a5a1a")
+            self._log(f"已启动：{model_name} @ :{port}")
+            threading.Thread(target=self._read_output, daemon=True).start()
+        except FileNotFoundError:
+            messagebox.showerror("未找到 openclaw", "请先点击【安装】按钮安装 openclaw。")
+        except Exception as e:
+            messagebox.showerror("启动失败", str(e))
 
-        # 写入场景提示词供 OpenClaw 读取
-        env["ONEPERSONCLAW_SCENE"] = scene
-        env["ONEPERSONCLAW_PROMPT"] = SCENES[scene]["prompt"]
-
-        def run():
-            try:
-                self.process = subprocess.Popen(["openclaw"], env=env)
-                self.after(0, lambda: self._set_status(
-                    f"✅ 运行中 [{model_name} | {scene}]", "#50c050"
-                ))
-            except FileNotFoundError:
-                self.after(0, lambda: self._set_status(
-                    "⚠ 未找到 openclaw，请先安装", "#e05050"
-                ))
-            except Exception as e:
-                self.after(0, lambda: self._set_status(f"⚠ 错误：{e}", "#e05050"))
-            finally:
-                self.after(0, lambda: self.launch_btn.configure(state="normal"))
-
-        threading.Thread(target=run, daemon=True).start()
+    def _read_output(self):
+        if self.process:
+            for line in self.process.stdout:
+                self._log(line.rstrip())
+            self._set_status("● 已停止", "#888")
+            self.launch_btn.configure(fg_color=["#3a7ebf", "#1f538d"])
 
     def _stop(self):
-        if self.process and self.process.poll() is None:
+        if self.process:
             self.process.terminate()
             self.process = None
-            self._set_status("⏹ 已停止", "#888")
-        else:
-            self._set_status("● 未在运行", "#888")
+            self._set_status("● 已停止", "#888")
+            self.launch_btn.configure(fg_color=["#3a7ebf", "#1f538d"])
+            self._log("服务已停止。")
 
-    # ── 配置存读 ──────────────────────────────────────────────
+    def _install_openclaw(self):
+        self._log("正在安装 openclaw...")
+        threading.Thread(target=self._run_install, daemon=True).start()
 
-    def _save_config(self):
-        config = {
-            "model": self.model_var.get(),
-            "api_key": self.api_key_entry.get().strip(),
-            "base_url": self.base_url_entry.get().strip(),
-            "scene": self.scene_var.get(),
-            "usage": self.usage_var.get(),
-        }
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-            json.dump(config, f, ensure_ascii=False, indent=2)
-        self._set_status("✅ 配置已保存", "#50c050")
+    def _run_install(self):
+        try:
+            result = subprocess.run(
+                ["pip", "install", "openclaw", "--upgrade"],
+                capture_output=True, text=True
+            )
+            self._log(result.stdout)
+            if result.returncode == 0:
+                self._log("openclaw 安装成功！")
+            else:
+                self._log("安装失败：" + result.stderr)
+        except Exception as e:
+            self._log(f"安装出错：{e}")
+
+    # ── 配置持久化 ────────────────────────────────────────────
 
     def _load_config(self):
-        if not os.path.exists(CONFIG_FILE):
-            self._on_scene_change()
-            self._update_cost()
-            return
-        try:
-            with open(CONFIG_FILE, encoding="utf-8") as f:
-                cfg = json.load(f)
-            if cfg.get("model") in MODELS:
-                self.model_var.set(cfg["model"])
-            if cfg.get("api_key"):
-                self.api_key_entry.insert(0, cfg["api_key"])
-            if cfg.get("base_url"):
-                self.base_url_entry.insert(0, cfg["base_url"])
-            if cfg.get("scene") in SCENES:
-                self.scene_var.set(cfg["scene"])
-            if cfg.get("usage") in USAGE_LEVELS:
-                self.usage_var.set(cfg["usage"])
-        except Exception:
-            pass
-        self._on_scene_change()
-        self._update_cost()
+        if os.path.exists(CONFIG_FILE):
+            try:
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                for name, cfg in data.get("models", {}).items():
+                    if name in self.models_config:
+                        self.models_config[name].update(cfg)
+                if "model" in data:
+                    self.model_var.set(data["model"])
+                if "scene" in data:
+                    self.scene_var.set(data["scene"])
+                    self._on_scene_change(data["scene"])
+                if "port" in data:
+                    self.port_entry.delete(0, "end")
+                    self.port_entry.insert(0, data["port"])
+                if "concurrency" in data:
+                    self.concurrency_entry.delete(0, "end")
+                    self.concurrency_entry.insert(0, data["concurrency"])
+                if "timeout" in data:
+                    self.timeout_entry.delete(0, "end")
+                    self.timeout_entry.insert(0, data["timeout"])
+                self._on_model_change(self.model_var.get())
+            except Exception:
+                pass
 
-    # ── 自动更新 ──────────────────────────────────────────────
+    def _save_config(self):
+        model_name = self.model_var.get()
+        self.models_config[model_name]["api_key"] = self.api_key_entry.get().strip()
+        self.models_config[model_name]["base_url"] = self.base_url_entry.get().strip()
+        data = {
+            "model": self.model_var.get(),
+            "scene": self.scene_var.get(),
+            "port": self.port_entry.get().strip(),
+            "concurrency": self.concurrency_entry.get().strip(),
+            "timeout": self.timeout_entry.get().strip(),
+            "models": self.models_config,
+        }
+        os.makedirs(os.path.dirname(CONFIG_FILE) if os.path.dirname(CONFIG_FILE) else ".", exist_ok=True)
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        self._log("配置已保存。")
+
+    def _export_config(self):
+        path = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON 文件", "*.json")],
+            title="导出配置"
+        )
+        if path:
+            model_name = self.model_var.get()
+            self.models_config[model_name]["api_key"] = self.api_key_entry.get().strip()
+            self.models_config[model_name]["base_url"] = self.base_url_entry.get().strip()
+            data = {
+                "model": self.model_var.get(),
+                "scene": self.scene_var.get(),
+                "port": self.port_entry.get().strip(),
+                "concurrency": self.concurrency_entry.get().strip(),
+                "timeout": self.timeout_entry.get().strip(),
+                "models": self.models_config,
+            }
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            self._log(f"配置已导出至：{path}")
+
+    def _import_config(self):
+        path = filedialog.askopenfilename(
+            filetypes=[("JSON 文件", "*.json")],
+            title="导入配置"
+        )
+        if path:
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                for name, cfg in data.get("models", {}).items():
+                    if name in self.models_config:
+                        self.models_config[name].update(cfg)
+                if "model" in data:
+                    self.model_var.set(data["model"])
+                if "scene" in data:
+                    self.scene_var.set(data["scene"])
+                    self._on_scene_change(data["scene"])
+                if "port" in data:
+                    self.port_entry.delete(0, "end")
+                    self.port_entry.insert(0, data["port"])
+                if "concurrency" in data:
+                    self.concurrency_entry.delete(0, "end")
+                    self.concurrency_entry.insert(0, data["concurrency"])
+                if "timeout" in data:
+                    self.timeout_entry.delete(0, "end")
+                    self.timeout_entry.insert(0, data["timeout"])
+                self._on_model_change(self.model_var.get())
+                self._log(f"配置已从 {path} 导入。")
+            except Exception as e:
+                messagebox.showerror("导入失败", str(e))
+
+    # ── 更新检查 ──────────────────────────────────────────────
 
     def _check_update_async(self):
-        threading.Thread(target=self._fetch_update, daemon=True).start()
+        threading.Thread(target=self._check_update, daemon=True).start()
 
     def _check_update_manual(self):
-        self.update_btn.configure(text="检查中...", state="disabled")
-        threading.Thread(target=self._fetch_update, args=(True,), daemon=True).start()
+        threading.Thread(target=self._check_update, args=(True,), daemon=True).start()
 
-    def _fetch_update(self, manual=False):
+    def _check_update(self, manual=False):
         try:
-            req = urllib.request.urlopen(UPDATE_URL, timeout=5)
-            data = json.loads(req.read().decode())
-            latest = data.get("version", VERSION)
-            notes = data.get("notes", "")
-            download_url = data.get("download_url", "")
-
+            url = "https://raw.githubusercontent.com/changyunju/OnePersonClaw/main/version.json"
+            with urllib.request.urlopen(url, timeout=5) as resp:
+                info = json.loads(resp.read().decode())
+            latest = info.get("version", VERSION)
+            notes = info.get("notes", "")
             if latest != VERSION:
-                self.after(0, lambda: self._show_update(latest, notes, download_url))
-            elif manual:
-                self.after(0, lambda: self._set_status("✅ 已是最新版本", "#50c050"))
-                self.after(0, lambda: self.update_btn.configure(
-                    text=f"v{VERSION} ✅", state="normal"
-                ))
+                self.update_btn.configure(
+                    text=f"v{VERSION} → {latest}",
+                    fg_color="#7a3a00", hover_color="#a05000"
+                )
+                if manual:
+                    if messagebox.askyesno(
+                        "发现新版本",
+                        f"最新版本：{latest}\n\n更新说明：{notes}\n\n是否前往下载？"
+                    ):
+                        webbrowser.open("https://github.com/changyunju/OnePersonClaw/releases")
+            else:
+                self.update_btn.configure(text=f"v{VERSION} ✓", fg_color="#2a5a2a")
+                if manual:
+                    messagebox.showinfo("已是最新", f"当前版本 v{VERSION} 已是最新。")
         except Exception:
             if manual:
-                self.after(0, lambda: self._set_status("⚠ 检查更新失败，请检查网络", "#e05050"))
-                self.after(0, lambda: self.update_btn.configure(
-                    text=f"v{VERSION}", state="normal"
-                ))
-
-    def _show_update(self, latest, notes, download_url):
-        self.update_btn.configure(
-            text=f"🆕 v{latest} 可更新",
-            fg_color="#c07000", hover_color="#a05000",
-            state="normal",
-            command=lambda: self._do_update(download_url)
-        )
-        self._set_status(f"🆕 发现新版本 v{latest}：{notes}", "#f0a020")
-
-    def _do_update(self, download_url):
-        if not download_url:
-            self._set_status("⚠ 暂无下载链接，请前往 GitHub 手动更新", "#e05050")
-            return
-
-        self._set_status("⬇ 下载更新中...", "#f0a020")
-
-        def download():
-            try:
-                save_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "OnePersonClaw_new.exe")
-                urllib.request.urlretrieve(download_url, save_path)
-                self.after(0, lambda: self._set_status(
-                    f"✅ 下载完成：{save_path}，请手动替换并重启", "#50c050"
-                ))
-            except Exception as e:
-                self.after(0, lambda: self._set_status(f"⚠ 下载失败：{e}", "#e05050"))
-
-        threading.Thread(target=download, daemon=True).start()
+                messagebox.showwarning("检查失败", "无法连接更新服务器，请检查网络。")
 
 
 if __name__ == "__main__":
     app = OnePersonClaw()
-    app.mainloop()
+    app.mainloop()```
