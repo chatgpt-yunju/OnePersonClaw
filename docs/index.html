@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OnePersonClaw — 一个人的AI爪子</title>
+  <meta name="description" content="OnePersonClaw：一套爪子，干掉一个团队。支持Claude、GPT-4o、DeepSeek、豆包、智谱GLM等多模型，一键启动AI自动化工作流。" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      background: #0d0d0d;
+      color: #e0e0e0;
+      line-height: 1.6;
+    }
+    a { color: #4a9eff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 80px 20px 60px;
+      background: linear-gradient(160deg, #0d0d0d 0%, #131a2e 100%);
+    }
+    .hero-emoji { font-size: 64px; display: block; margin-bottom: 16px; }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      background: linear-gradient(90deg, #4a9eff, #a06eff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero .tagline {
+      font-size: 1.2rem;
+      color: #888;
+      margin: 12px 0 36px;
+    }
+    .btn-group { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-block;
+      padding: 14px 36px;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s;
+    }
+    .btn:hover { opacity: .85; text-decoration: none; }
+    .btn-primary { background: linear-gradient(90deg, #1a6eef, #7a3aef); color: #fff; }
+    .btn-secondary { background: #1e1e1e; color: #ccc; border: 1px solid #333; }
+
+    /* BADGES */
+    .badges { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
+    .badge {
+      font-size: .8rem;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: #1a1a2e;
+      border: 1px solid #2a2a4e;
+      color: #aaa;
+    }
+
+    /* SECTION */
+    section { padding: 64px 20px; max-width: 960px; margin: 0 auto; }
+    section h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 32px;
+      text-align: center;
+      color: #fff;
+    }
+
+    /* FEATURES */
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+    .feature-card {
+      background: #131313;
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 24px;
+      transition: border-color .2s;
+    }
+    .feature-card:hover { border-color: #4a9eff55; }
+    .feature-icon { font-size: 2rem; margin-bottom: 12px; }
+    .feature-card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; color: #fff; }
+    .feature-card p { font-size: .9rem; color: #888; }
+
+    /* MODELS */
+    .models { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+    .model-tag {
+      padding: 8px 20px;
+      background: #161616;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      font-size: .95rem;
+      color: #ccc;
+    }
+
+    /* SCENES */
+    .scenes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+    .scene-card {
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 10px;
+      padding: 16px 20px;
+    }
+    .scene-card .name { font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .scene-card .desc { font-size: .82rem; color: #666; }
+
+    /* DOWNLOAD */
+    .download-box {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+    }
+    .download-box h3 { font-size: 1.3rem; margin-bottom: 8px; color: #fff; }
+    .download-box p { color: #666; margin-bottom: 24px; }
+    .version-info { font-size: .82rem; color: #555; margin-top: 12px; }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid #1a1a1a;
+      padding: 32px 20px;
+      text-align: center;
+      font-size: .85rem;
+      color: #444;
+    }
+    footer .links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+    footer .links a { color: #555; }
+    footer .links a:hover { color: #4a9eff; }
+  </style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <div class="hero">
+    <span class="hero-emoji">🦞</span>
+    <h1>OnePersonClaw</h1>
+    <p class="tagline">一个人，一套爪子，干掉一个团队</p>
+    <div class="btn-group">
+      <a class="btn btn-primary" href="https://github.com/chatgpt-yunju/OnePersonClaw/releases/latest" target="_blank">⬇ 免费下载 Windows EXE</a>
+      <a class="btn btn-secondary" href="https://github.com/chatgpt-yunju/OnePersonClaw" target="_blank">GitHub 源码</a>
+    </div>
+    <div class="badges">
+      <span class="badge">Windows 10/11</span>
+      <span class="badge">双击即用</span>
+      <span class="badge">多模型支持</span>
+      <span class="badge">开源免费</span>
+      <span class="badge">by 常云举</span>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <section>
+    <h2>核心功能</h2>
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3>多模型自由切换</h3>
+        <p>支持 Claude、GPT-4o、DeepSeek、火山引擎豆包、智谱 GLM、本地 Ollama，按需选择，互不干扰。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <h3>7 大场景模板</h3>
+        <p>流量获客、内容矩阵、线索抓取、SEO 写作、数据分析……深度适配一人公司创业场景。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💾</div>
+        <h3>每模型独立配置</h3>
+        <p>不同模型的 API Key 和 Base URL 独立保存，切换模型自动加载，互不干扰。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📦</div>
+        <h3>配置导入/导出</h3>
+        <p>一键导出全部配置为 JSON，换电脑秒级恢复，团队共享同一套配置。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💰</div>
+        <h3>月费用实时估算</h3>
+        <p>轻度 / 正常 / 重度三档，切换模型即时显示预计月费，从免费到 $200 任你选。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔄</div>
+        <h3>自动检查更新</h3>
+        <p>启动时静默检查，发现新版本一键跳转下载，永远用最新功能。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODELS -->
+  <section style="background:#0a0a0a; max-width:100%; padding:48px 20px;">
+    <div style="max-width:960px; margin:0 auto;">
+      <h2>支持的模型</h2>
+      <div class="models">
+        <span class="model-tag">Claude Sonnet (Anthropic)</span>
+        <span class="model-tag">GPT-4o (OpenAI)</span>
+        <span class="model-tag">DeepSeek</span>
+        <span class="model-tag">火山引擎 豆包</span>
+        <span class="model-tag">智谱 GLM</span>
+        <span class="model-tag">本地 Ollama（免费）</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCENES -->
+  <section>
+    <h2>内置场景模板</h2>
+    <div class="scenes">
+      <div class="scene-card"><div class="name">通用助手</div><div class="desc">日常问答、分析、写作</div></div>
+      <div class="scene-card"><div class="name">流量获客</div><div class="desc">获客策略、转化优化、ROI分析</div></div>
+      <div class="scene-card"><div class="name">内容矩阵</div><div class="desc">多平台内容生产、自动适配格式</div></div>
+      <div class="scene-card"><div class="name">线索抓取</div><div class="desc">精准客户识别、线索质量评估</div></div>
+      <div class="scene-card"><div class="name">SEO 写作</div><div class="desc">SEO文章生成、GEO优化</div></div>
+      <div class="scene-card"><div class="name">数据分析</div><div class="desc">数据解读、异常识别、优化建议</div></div>
+      <div class="scene-card"><div class="name">AI时代生存指南</div><div class="desc">个人IP定位、超级个体打造</div></div>
+    </div>
+  </section>
+
+  <!-- DOWNLOAD -->
+  <section>
+    <div class="download-box">
+      <h3>立即免费下载</h3>
+      <p>Windows 10/11 · 双击运行 · 无需安装 · 无需命令行</p>
+      <a class="btn btn-primary" href="https://github.com/chatgpt-yunju/OnePersonClaw/releases/latest" target="_blank">⬇ 下载最新版 EXE</a>
+      <p class="version-info">当前版本 v1.4.0 · 开源免费 · GitHub Releases 托管</p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="links">
+      <a href="https://yunjunet.cn" target="_blank">yunjunet.cn</a>
+      <a href="https://plannet.yunjunet.cn" target="_blank">PlanNet</a>
+      <a href="https://aippt.yunjunet.cn" target="_blank">AI PPT</a>
+      <a href="https://ccclub.ai" target="_blank">CC Club</a>
+      <a href="https://github.com/chatgpt-yunju/OnePersonClaw" target="_blank">GitHub</a>
+    </div>
+    <p>QQ 交流群：665889946 &nbsp;·&nbsp; by 常云举 &nbsp;·&nbsp; © 2026 OnePersonClaw</p>
+  </footer>
+
+</body>
+</html>
