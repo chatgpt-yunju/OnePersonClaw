@@ -7,3 +7,5 @@ config.json
 *.pyc
 backend/node_modules/
 backend/.env
+admin/
+mobile/
