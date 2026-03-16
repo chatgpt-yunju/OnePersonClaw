@@ -6,7 +6,7 @@ import threading
 import urllib.request
 
 # ── 常量 ─────────────────────────────────────────────────────
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 UPDATE_URL = "https://raw.githubusercontent.com/OnePersonClaw/releases/main/version.json"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
@@ -32,6 +32,22 @@ MODELS = {
         "cost_light": "$1~5",
         "cost_normal": "$5~15",
         "cost_heavy": "$15~40",
+    },
+    "火山引擎 (豆包)": {
+        "key": "volcengine",
+        "env_key": "OPENAI_API_KEY",
+        "base_url": "https://ark.cn-beijing.volces.com/api/v3",
+        "cost_light": "$1~5",
+        "cost_normal": "$5~15",
+        "cost_heavy": "$15~40",
+    },
+    "智谱 GLM": {
+        "key": "zhipu",
+        "env_key": "OPENAI_API_KEY",
+        "base_url": "https://open.bigmodel.cn/api/paas/v4",
+        "cost_light": "$2~8",
+        "cost_normal": "$8~25",
+        "cost_heavy": "$25~60",
     },
     "本地模型 Ollama": {
         "key": "ollama",
