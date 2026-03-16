@@ -515,9 +515,31 @@ class OnePersonClaw(ctk.CTk):
         if effective_base_url:
             env["BASE_URL"] = effective_base_url
 
+        # 查找 openclaw 可执行文件（支持 npm 全局安装路径）
+        openclaw_cmd = shutil.which("openclaw")
+        if not openclaw_cmd:
+            # Windows 常见 npm 全局路径
+            candidates = [
+                os.path.expanduser("~\\AppData\\Roaming\\npm\\openclaw.cmd"),
+                os.path.expanduser("~\\AppData\\Roaming\\npm\\openclaw"),
+                "C:\\Program Files\\nodejs\\openclaw.cmd",
+            ]
+            for c in candidates:
+                if os.path.exists(c):
+                    openclaw_cmd = c
+                    break
+
+        if not openclaw_cmd:
+            messagebox.showerror(
+                "未找到 openclaw",
+                "请先点击【📦 安装】按钮安装 openclaw。\n\n"
+                "安装完成后重新点击启动。"
+            )
+            return
+
         try:
             self.process = subprocess.Popen(
-                ["openclaw", "--port", port, "--concurrency", concurrency, "--timeout", timeout],
+                [openclaw_cmd, "gateway", "start"],
                 env=env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -527,8 +549,6 @@ class OnePersonClaw(ctk.CTk):
             self.launch_btn.configure(fg_color="#1a5a1a")
             self._log(f"已启动：{model_name} @ :{port}")
             threading.Thread(target=self._read_output, daemon=True).start()
-        except FileNotFoundError:
-            messagebox.showerror("未找到 openclaw", "请先点击【安装】按钮安装 openclaw。")
         except Exception as e:
             messagebox.showerror("启动失败", str(e))
 
@@ -553,15 +573,24 @@ class OnePersonClaw(ctk.CTk):
 
     def _run_install(self):
         try:
+            self._log("检查 Node.js...")
+            node_check = subprocess.run(["node", "--version"], capture_output=True, text=True)
+            if node_check.returncode != 0:
+                self._log("❌ 未找到 Node.js，请先安装 Node.js：https://nodejs.org")
+                return
+            self._log(f"Node.js {node_check.stdout.strip()} ✓")
+
+            self._log("正在安装 openclaw（npm install -g openclaw）...")
             result = subprocess.run(
-                ["pip", "install", "openclaw", "--upgrade"],
+                ["npm", "install", "-g", "openclaw"],
                 capture_output=True, text=True
             )
-            self._log(result.stdout)
+            if result.stdout:
+                self._log(result.stdout)
             if result.returncode == 0:
-                self._log("openclaw 安装成功！")
+                self._log("✅ openclaw 安装成功！点击【🚀 一键启动】即可运行。")
             else:
-                self._log("安装失败：" + result.stderr)
+                self._log("❌ 安装失败：" + result.stderr)
         except Exception as e:
             self._log(f"安装出错：{e}")
 
@@ -700,4 +729,4 @@ class OnePersonClaw(ctk.CTk):
 
 if __name__ == "__main__":
     app = OnePersonClaw()
-    app.mainloop()```
+    app.mainloop()
