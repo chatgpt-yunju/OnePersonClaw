@@ -11,7 +11,7 @@ import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 
 # ── 常量 ─────────────────────────────────────────────────────
-VERSION = "1.4.0"
+VERSION = "1.8.1"
 UPDATE_URL = "https://raw.githubusercontent.com/chatgpt-yunju/OnePersonClaw/main/version.json"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
@@ -178,37 +178,6 @@ class OnePersonClaw(ctk.CTk):
             font=ctk.CTkFont(size=13), text_color="#888"
         ).pack(pady=(2, 12))
 
-        # 聊天框（置于模型选择上方）
-        chat_frame = ctk.CTkFrame(self, fg_color="transparent")
-        chat_frame.pack(fill="x", padx=30, pady=(4, 0))
-
-        ctk.CTkLabel(
-            chat_frame, text="💬 与 OpenClaw 对话",
-            font=ctk.CTkFont(size=12, weight="bold")
-        ).pack(anchor="w")
-
-        self.chat_box = ctk.CTkTextbox(
-            chat_frame, height=120, font=ctk.CTkFont(size=11),
-            state="disabled"
-        )
-        self.chat_box.pack(fill="x", pady=(4, 4))
-
-        chat_input_row = ctk.CTkFrame(chat_frame, fg_color="transparent")
-        chat_input_row.pack(fill="x")
-
-        self.chat_input = ctk.CTkEntry(
-            chat_input_row, placeholder_text="输入消息，按 Enter 或点击发送...",
-            font=ctk.CTkFont(size=12)
-        )
-        self.chat_input.pack(side="left", fill="x", expand=True, padx=(0, 6))
-        self.chat_input.bind("<Return>", lambda e: self._send_chat())
-
-        ctk.CTkButton(
-            chat_input_row, text="发送",
-            command=self._send_chat, width=70, height=32,
-            font=ctk.CTkFont(size=12)
-        ).pack(side="left")
-
         # 主体
         body = ctk.CTkFrame(self)
         body.pack(fill="both", expand=True, padx=30)
@@ -284,7 +253,7 @@ class OnePersonClaw(ctk.CTk):
         ).pack(side="left", padx=6)
 
         ctk.CTkButton(
-            btn_frame, text="📦 安装",
+            btn_frame, text="📦 一键安装",
             command=self._install_openclaw, width=90, height=44,
             fg_color="#5a3a7a", hover_color="#3a1a5a",
             font=ctk.CTkFont(size=14)
@@ -658,6 +627,8 @@ class OnePersonClaw(ctk.CTk):
             self.launch_btn.configure(fg_color="#1a5a1a")
             self._log(f"已启动：{model_name} @ :{port}")
             threading.Thread(target=self._read_output, daemon=True).start()
+            # 打开 openclaw dashboard
+            webbrowser.open(f"http://localhost:{port}")
         except Exception as e:
             messagebox.showerror("启动失败", str(e))
 
@@ -680,51 +651,57 @@ class OnePersonClaw(ctk.CTk):
         self._log("正在安装 openclaw...")
         threading.Thread(target=self._run_install, daemon=True).start()
 
+    def _ps(self, cmd, timeout=300):
+        """以管理员权限静默运行 PowerShell 命令，返回 CompletedProcess"""
+        si = None
+        cf = 0
+        if sys.platform == "win32":
+            si = subprocess.STARTUPINFO()
+            si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            si.wShowWindow = subprocess.SW_HIDE
+            cf = subprocess.CREATE_NO_WINDOW
+        return subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+             "-Command", cmd],
+            capture_output=True, text=True, timeout=timeout,
+            startupinfo=si, creationflags=cf
+        )
+
     def _run_install(self):
         CC_CLUB_SCRIPT = "https://academy.claude-code.club/assets/getting-started/installation/claude-code-installation-by-cc-club.ps1"
         try:
-            # 1. 检查 Git，缺失则用 cc-club 脚本安装
+            # 1. 检查 Git，缺失则用 cc-club 脚本以管理员权限安装
             self._log("[1/4] 检查 Git...")
-            git_check = subprocess.run("git --version", shell=True, capture_output=True, text=True)
+            git_check = self._ps("git --version")
             if git_check.returncode != 0:
-                self._log("   未找到 Git，正在调用一键安装脚本...")
+                self._log("   未找到 Git，正在以管理员权限调用一键安装脚本...")
                 self._log(f"   irm {CC_CLUB_SCRIPT} | iex")
-                r = subprocess.run(
-                    f'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm {CC_CLUB_SCRIPT} | iex"',
-                    shell=True, capture_output=True, text=True, timeout=300
-                )
+                r = self._ps(f"Start-Process powershell -Verb RunAs -Wait -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command \"irm {CC_CLUB_SCRIPT} | iex\"'")
                 if r.stdout: self._log(r.stdout)
                 if r.stderr: self._log(r.stderr)
-                # 重新检查
-                git_check = subprocess.run("git --version", shell=True, capture_output=True, text=True)
+                git_check = self._ps("git --version")
                 if git_check.returncode != 0:
                     self._log("❌ Git 安装失败，请重启后重试或手动安装：https://git-scm.com/download/win")
                     return
             self._log(f"   {git_check.stdout.strip()} ✓")
 
-            # 2. 检查 Node.js，缺失则用 cc-club 脚本安装
+            # 2. 检查 Node.js，缺失则用 cc-club 脚本以管理员权限安装
             self._log("[2/4] 检查 Node.js...")
-            node_check = subprocess.run("node --version", shell=True, capture_output=True, text=True)
+            node_check = self._ps("node --version")
             if node_check.returncode != 0:
-                self._log("   未找到 Node.js，正在调用一键安装脚本...")
-                r = subprocess.run(
-                    f'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm {CC_CLUB_SCRIPT} | iex"',
-                    shell=True, capture_output=True, text=True, timeout=300
-                )
+                self._log("   未找到 Node.js，正在以管理员权限调用一键安装脚本...")
+                r = self._ps(f"Start-Process powershell -Verb RunAs -Wait -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command \"irm {CC_CLUB_SCRIPT} | iex\"'")
                 if r.stdout: self._log(r.stdout)
                 if r.stderr: self._log(r.stderr)
-                node_check = subprocess.run("node --version", shell=True, capture_output=True, text=True)
+                node_check = self._ps("node --version")
                 if node_check.returncode != 0:
                     self._log("❌ Node.js 安装失败，请重启后重试或手动安装：https://nodejs.org")
                     return
             self._log(f"   Node.js {node_check.stdout.strip()} ✓")
 
-            # 3. 升级 Node.js 到最新版（通过 npm 安装 n，Windows 用 npm-windows-upgrade）
+            # 3. 升级 Node.js 到最新版
             self._log("[3/4] 升级 Node.js 到最新 LTS...")
-            upgrade = subprocess.run(
-                "npm install -g npm-windows-upgrade && npm-windows-upgrade --npm-version latest --node-version lts --no-prompt",
-                shell=True, capture_output=True, text=True, timeout=300
-            )
+            upgrade = self._ps("npm install -g npm-windows-upgrade; npm-windows-upgrade --npm-version latest --node-version lts --no-prompt")
             if upgrade.stdout:
                 self._log(upgrade.stdout.strip())
             if upgrade.returncode == 0:
@@ -735,10 +712,7 @@ class OnePersonClaw(ctk.CTk):
             # 4. 安装 openclaw
             self._log("[4/4] 正在安装 openclaw（npm install -g openclaw）...")
             self._log("   这可能需要1-3分钟，请耐心等待...")
-            result = subprocess.run(
-                "npm install -g openclaw",
-                shell=True, capture_output=True, text=True, timeout=300
-            )
+            result = self._ps("npm install -g openclaw")
             if result.stdout:
                 self._log(result.stdout)
             if result.returncode == 0:
@@ -879,9 +853,13 @@ class OnePersonClaw(ctk.CTk):
         if not openclaw_cmd:
             self._append_chat("[错误] 未找到 openclaw，请先安装。")
             return
-        # 隐藏 Windows 控制台窗口
+        # 隐藏 Windows 控制台窗口（STARTUPINFO + CREATE_NO_WINDOW）
         kwargs = {}
         if sys.platform == "win32":
+            si = subprocess.STARTUPINFO()
+            si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            si.wShowWindow = subprocess.SW_HIDE
+            kwargs["startupinfo"] = si
             kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
         try:
             result = subprocess.run(
@@ -902,7 +880,7 @@ class OnePersonClaw(ctk.CTk):
                 except Exception:
                     reply = output
             else:
-                reply = result.stderr.strip() or "（无回复）"
+                reply = (result.stderr or "").strip() or "（无回复）"
             self._append_chat(f"OpenClaw：{reply}")
         except subprocess.TimeoutExpired:
             self._append_chat("[错误] 请求超时（60s）。")
