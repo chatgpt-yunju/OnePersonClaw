@@ -169,7 +169,7 @@ class OnePersonClaw(ctk.CTk):
         self.update_btn.pack(side="right")
 
         ctk.CTkLabel(
-            header, text="by 常云举",
+            header, text="by 常云举19966519194",
             font=ctk.CTkFont(size=13), text_color="gray"
         ).pack(side="right", padx=12, pady=6)
 

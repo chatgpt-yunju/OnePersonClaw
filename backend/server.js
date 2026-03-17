@@ -15,7 +15,7 @@ app.use('/api/users',         require('./src/routes/users'));
 app.use('/api/stats',         require('./src/routes/stats'));
 app.use('/api/announcements', require('./src/routes/announcements'));
 
-app.get('/', (req, res) => res.json({ name: 'OnePersonClaw API', version: '1.0.0', author: '常云举' }));
+app.get('/', (req, res) => res.json({ name: 'OnePersonClaw API', version: '1.0.0', author: '常云举19966519194' }));
 
 const PORT = process.env.PORT || 3030;
 app.listen(PORT, () => console.log(`OnePersonClaw API running on port ${PORT}`));

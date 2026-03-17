@@ -68,7 +68,7 @@ INSERT IGNORE INTO users (username, email, password, role) VALUES
 INSERT IGNORE INTO settings (`key`, value) VALUES
 ('site_name', 'OnePersonClaw'),
 ('site_slogan', '一个人，一套爪子，干掉一个团队'),
-('author', '常云举'),
+('author', '常云举19966519194'),
 ('cost_claude_light', '$10~30'),
 ('cost_claude_normal', '$30~70'),
 ('cost_claude_heavy', '$70~150'),
