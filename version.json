@@ -1,5 +1,5 @@
 {
-  "version": "1.8.7",
-  "notes": "使用 winget/Chocolatey 命令行方式安装 Git 和 Node.js，配置 npm 淘宝镜像源加速",
+  "version": "1.8.8",
+  "notes": "修复 Node.js 安装失败问题：添加 Chocolatey 备选方案、刷新环境变量、延长安装超时时间",
   "download_url": "https://github.com/chatgpt-yunju/OnePersonClaw/releases/latest"
 }

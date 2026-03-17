@@ -11,7 +11,7 @@ import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 
 # ── 常量 ─────────────────────────────────────────────────────
-VERSION = "1.8.1"
+VERSION = "1.8.8"
 UPDATE_URL = "https://raw.githubusercontent.com/chatgpt-yunju/OnePersonClaw/main/version.json"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
@@ -729,15 +729,37 @@ class OnePersonClaw(ctk.CTk):
 
     def _run_install(self):
         try:
+            # 辅助函数：刷新环境变量
+            def refresh_env():
+                self._ps("$env:Path = [System.Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path','User')")
+
+            # 辅助函数：检查 Chocolatey
+            def has_choco():
+                return self._ps("Get-Command choco -ErrorAction SilentlyContinue").returncode == 0
+
             # 1. 检查并安装 Git
             self._log("[1/3] 检查 Git...")
             git_check = self._ps("git --version")
             if git_check.returncode != 0:
-                self._log("   未找到 Git，正在使用 winget 安装...")
-                r = self._ps("winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements")
+                self._log("   未找到 Git，正在安装...")
+
+                # 尝试 Chocolatey
+                if has_choco():
+                    self._log("   使用 Chocolatey 安装 Git...")
+                    r = self._ps("choco install git -y --no-progress", timeout=600)
+                else:
+                    self._log("   使用 winget 安装 Git...")
+                    r = self._ps("winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements", timeout=600)
+
                 if r.returncode != 0:
-                    self._log("❌ Git 安装失败，请重启后重试或手动安装：https://git-scm.com/download/win")
+                    self._log("❌ Git 安装失败")
+                    self._log("   请尝试：")
+                    self._log("   1. 重启电脑后重试")
+                    self._log("   2. 手动安装：https://git-scm.com/download/win")
                     return
+
+                # 刷新环境变量并重新检查
+                refresh_env()
                 git_check = self._ps("git --version")
                 if git_check.returncode != 0:
                     self._log("❌ Git 安装失败，请重启后重试")
@@ -748,11 +770,25 @@ class OnePersonClaw(ctk.CTk):
             self._log("[2/3] 检查 Node.js...")
             node_check = self._ps("node --version")
             if node_check.returncode != 0:
-                self._log("   未找到 Node.js，正在使用 winget 安装...")
-                r = self._ps("winget install --id OpenJS.NodeJS.LTS -e --source winget --silent --accept-package-agreements --accept-source-agreements")
+                self._log("   未找到 Node.js，正在安装...")
+
+                # 尝试 Chocolatey
+                if has_choco():
+                    self._log("   使用 Chocolatey 安装 Node.js LTS...")
+                    r = self._ps("choco install nodejs-lts -y --no-progress", timeout=600)
+                else:
+                    self._log("   使用 winget 安装 Node.js LTS...")
+                    r = self._ps("winget install --id OpenJS.NodeJS.LTS -e --source winget --silent --accept-package-agreements --accept-source-agreements", timeout=600)
+
                 if r.returncode != 0:
-                    self._log("❌ Node.js 安装失败，请重启后重试或手动安装：https://nodejs.org")
+                    self._log("❌ Node.js 安装失败")
+                    self._log("   请尝试：")
+                    self._log("   1. 重启电脑后重试")
+                    self._log("   2. 手动安装：https://nodejs.org")
                     return
+
+                # 刷新环境变量并重新检查
+                refresh_env()
                 node_check = self._ps("node --version")
                 if node_check.returncode != 0:
                     self._log("❌ Node.js 安装失败，请重启后重试")
