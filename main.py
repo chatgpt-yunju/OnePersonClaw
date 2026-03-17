@@ -139,7 +139,8 @@ class OnePersonClaw(ctk.CTk):
         super().__init__()
         self.title(f"OnePersonClaw v{VERSION} — 一个人的AI爪子")
         self.geometry("760x700")
-        self.resizable(False, False)
+        self.resizable(True, True)
+        self.minsize(700, 600)
         self.process = None
         # 每个模型独立存储 key 和 base_url
         self.models_config = {name: {"api_key": "", "base_url": m.get("base_url", "")}
