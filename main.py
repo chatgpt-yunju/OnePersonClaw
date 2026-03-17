@@ -259,6 +259,20 @@ class OnePersonClaw(ctk.CTk):
             font=ctk.CTkFont(size=14)
         ).pack(side="left", padx=6)
 
+        ctk.CTkButton(
+            btn_frame, text="📤 导出",
+            command=self._export_config, width=80, height=44,
+            fg_color="#333", hover_color="#444",
+            font=ctk.CTkFont(size=14)
+        ).pack(side="left", padx=6)
+
+        ctk.CTkButton(
+            btn_frame, text="📥 导入",
+            command=self._import_config, width=80, height=44,
+            fg_color="#333", hover_color="#444",
+            font=ctk.CTkFont(size=14)
+        ).pack(side="left", padx=6)
+
         # 聊天框
         chat_frame = ctk.CTkFrame(self, fg_color="transparent")
         chat_frame.pack(fill="x", padx=30, pady=(4, 0))
@@ -609,7 +623,7 @@ class OnePersonClaw(ctk.CTk):
         try:
             # 1. 检查 Git
             self._log("[1/3] 检查 Git...")
-            git_check = subprocess.run(["git", "--version"], capture_output=True, text=True)
+            git_check = subprocess.run("git --version", shell=True, capture_output=True, text=True)
             if git_check.returncode != 0:
                 self._log("❌ 未找到 Git")
                 self._log("   请下载安装 Git：https://git-scm.com/download/win")
@@ -619,7 +633,7 @@ class OnePersonClaw(ctk.CTk):
 
             # 2. 检查 Node.js
             self._log("[2/3] 检查 Node.js...")
-            node_check = subprocess.run(["node", "--version"], capture_output=True, text=True)
+            node_check = subprocess.run("node --version", shell=True, capture_output=True, text=True)
             if node_check.returncode != 0:
                 self._log("❌ 未找到 Node.js")
                 self._log("   请下载安装 Node.js LTS：https://nodejs.org")
@@ -631,8 +645,8 @@ class OnePersonClaw(ctk.CTk):
             self._log("[3/3] 正在安装 openclaw（npm install -g openclaw）...")
             self._log("   这可能需要1-3分钟，请耐心等待...")
             result = subprocess.run(
-                ["npm", "install", "-g", "openclaw"],
-                capture_output=True, text=True
+                "npm install -g openclaw",
+                shell=True, capture_output=True, text=True
             )
             if result.stdout:
                 self._log(result.stdout)
