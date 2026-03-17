@@ -18,21 +18,27 @@ CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.j
 MODELS = {
     "Claude Sonnet (Anthropic)": {
         "key": "claude",
+        "id": "claude-sonnet-4-5",
         "env_key": "ANTHROPIC_API_KEY",
+        "openclaw_provider": "anthropic",
         "cost_light": "$10~30",
         "cost_normal": "$30~70",
         "cost_heavy": "$70~150",
     },
     "GPT-4o (OpenAI)": {
         "key": "openai",
+        "id": "gpt-4o",
         "env_key": "OPENAI_API_KEY",
+        "openclaw_provider": "openai",
         "cost_light": "$15~40",
         "cost_normal": "$40~100",
         "cost_heavy": "$100~200",
     },
     "DeepSeek": {
         "key": "deepseek",
+        "id": "deepseek-chat",
         "env_key": "OPENAI_API_KEY",
+        "openclaw_provider": "openai",
         "base_url": "https://api.deepseek.com",
         "cost_light": "$1~5",
         "cost_normal": "$5~15",
@@ -40,7 +46,9 @@ MODELS = {
     },
     "火山引擎 (豆包)": {
         "key": "volcengine",
+        "id": "deepseek-v3-2-251201",
         "env_key": "OPENAI_API_KEY",
+        "openclaw_provider": "openai",
         "base_url": "https://ark.cn-beijing.volces.com/api/v3",
         "cost_light": "$1~5",
         "cost_normal": "$5~15",
@@ -48,7 +56,9 @@ MODELS = {
     },
     "智谱 GLM": {
         "key": "zhipu",
+        "id": "glm-4-flash",
         "env_key": "OPENAI_API_KEY",
+        "openclaw_provider": "openai",
         "base_url": "https://open.bigmodel.cn/api/paas/v4",
         "cost_light": "$2~8",
         "cost_normal": "$8~25",
@@ -56,7 +66,9 @@ MODELS = {
     },
     "本地模型 Ollama": {
         "key": "ollama",
+        "id": "ollama/llama3",
         "env_key": "OPENAI_API_KEY",
+        "openclaw_provider": "openai",
         "base_url": "http://localhost:11434/v1",
         "cost_light": "免费",
         "cost_normal": "免费",
@@ -64,7 +76,9 @@ MODELS = {
     },
     "CC Club - Claude Code": {
         "key": "ccclub_claude",
+        "id": "claude-sonnet-4-5",
         "env_key": "OPENAI_API_KEY",
+        "openclaw_provider": "openai",
         "base_url": "https://claude-code.club/api",
         "cost_light": "积分制",
         "cost_normal": "积分制",
@@ -73,7 +87,9 @@ MODELS = {
     },
     "CC Club - Codex": {
         "key": "ccclub_codex",
+        "id": "codex-mini-latest",
         "env_key": "OPENAI_API_KEY",
+        "openclaw_provider": "openai",
         "base_url": "https://claude-code.club/api",
         "cost_light": "积分制",
         "cost_normal": "积分制",
@@ -82,7 +98,9 @@ MODELS = {
     },
     "CC Club - Gemini": {
         "key": "ccclub_gemini",
+        "id": "gemini-2.5-pro",
         "env_key": "OPENAI_API_KEY",
+        "openclaw_provider": "openai",
         "base_url": "https://claude-code.club/api",
         "cost_light": "积分制",
         "cost_normal": "积分制",
@@ -334,15 +352,68 @@ class OnePersonClaw(ctk.CTk):
             font=ctk.CTkFont(size=12)
         ).pack(side="left")
 
+        # 工具箱快捷按钮
+        toolbox_frame = ctk.CTkFrame(self, fg_color="transparent")
+        toolbox_frame.pack(fill="x", padx=30, pady=(4, 0))
+        ctk.CTkLabel(
+            toolbox_frame, text="🔧 工具箱",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).pack(side="left", padx=(0, 8))
+        for btn_text, btn_cmd in [
+            ("🏥 健康检查", self._run_doctor),
+            ("📡 渠道状态", self._run_channels_status),
+            ("🤖 模型列表", self._run_models_list),
+            ("💬 会话列表", self._run_sessions),
+            ("📋 查看日志", self._run_logs),
+        ]:
+            ctk.CTkButton(
+                toolbox_frame, text=btn_text, command=btn_cmd,
+                width=90, height=28, fg_color="#222", hover_color="#333",
+                font=ctk.CTkFont(size=11)
+            ).pack(side="left", padx=3)
+
         # 常用命令速查 TabView
         cmd_tab = ctk.CTkTabview(self, height=130)
         cmd_tab.pack(fill="x", padx=20, pady=(4, 0))
         CMD_GROUPS = [
-            ("模型", ["/model", "/model gpt-4o", "/model claude-3-5-sonnet", "openclaw models list", "openclaw models status", "openclaw models set openai/gpt-4o"]),
-            ("认证", ["openclaw models auth setup-token", "openclaw models auth paste-token --provider openai", "openclaw models auth paste-token --provider anthropic"]),
-            ("配置", ["openclaw config list", "openclaw config edit", "openclaw onboard"]),
-            ("聊天", ["/new", "/stop", "/compact", "/status", "/tts on", "/tts off"]),
-            ("插件", ["openclaw plugins list", "openclaw skills list", "openclaw logs", "openclaw --version"]),
+            ("模型", [
+                "openclaw models list",
+                "openclaw models status",
+                "openclaw models set anthropic/claude-sonnet-4-5",
+                "openclaw models set openai/gpt-4o",
+                "openclaw models set deepseek/deepseek-chat",
+                "openclaw models aliases",
+            ]),
+            ("认证", [
+                "openclaw models auth",
+                "openclaw configure",
+                "openclaw onboard",
+                "openclaw config set model.provider anthropic",
+                "openclaw config get model",
+            ]),
+            ("渠道", [
+                "openclaw channels list",
+                "openclaw channels status",
+                "openclaw channels add --channel telegram --token <token>",
+                "openclaw channels login --channel whatsapp",
+                "openclaw channels logs",
+            ]),
+            ("网关", [
+                "openclaw gateway",
+                "openclaw gateway --port 18789",
+                "openclaw gateway --force",
+                "openclaw health",
+                "openclaw doctor",
+                "openclaw dashboard",
+            ]),
+            ("插件", [
+                "openclaw plugins list",
+                "openclaw skills list",
+                "openclaw sessions list",
+                "openclaw logs",
+                "openclaw update",
+                "openclaw --version",
+            ]),
         ]
         for tab_name, cmds in CMD_GROUPS:
             tab = cmd_tab.add(tab_name)
@@ -568,9 +639,11 @@ class OnePersonClaw(ctk.CTk):
 
         # 同步更新 openclaw 配置
         model_id = model_info.get("id", "")
-        if model_id:
+        provider = model_info.get("openclaw_provider", "")
+        if model_id and provider:
+            self._log(f"🔄 切换模型到 {provider}/{model_id}")
             threading.Thread(
-                target=lambda: self._ps(f"openclaw config set model {model_id}"),
+                target=lambda: self._run_openclaw_cmd(f"models set {provider}/{model_id}"),
                 daemon=True
             ).start()
 
@@ -680,6 +753,26 @@ class OnePersonClaw(ctk.CTk):
                 "安装完成后重新点击启动。"
             )
             return
+
+        # 同步模型配置到 openclaw
+        if not using_free:
+            provider = model_info.get("openclaw_provider", "")
+            if provider and model_id:
+                self._log(f"🔄 同步模型配置: {provider}/{model_id}")
+                try:
+                    # 设置 API Key
+                    env_key = model_info.get("env_key", "")
+                    if env_key and api_key:
+                        self._ps(f"openclaw config set {env_key} {api_key}")
+
+                    # 设置 Base URL（如果有）
+                    if effective_base_url and provider == "openai":
+                        self._ps(f"openclaw config set OPENAI_BASE_URL {effective_base_url}")
+
+                    # 设置默认模型
+                    self._ps(f"openclaw models set {provider}/{model_id}")
+                except Exception as e:
+                    self._log(f"⚠️ 配置同步失败: {e}")
 
         try:
             self.process = subprocess.Popen(
@@ -825,6 +918,35 @@ class OnePersonClaw(ctk.CTk):
                 self._log("="*50)
                 self._log("✅ openclaw 安装成功！")
                 self._log("")
+
+                # 自动配置当前模型的 API Key
+                self._log("🔧 正在配置 openclaw...")
+                model_name = self.model_var.get()
+                model_info = MODELS.get(model_name, {})
+                api_key = self.api_key_entry.get().strip()
+                base_url = self.base_url_entry.get().strip()
+
+                if api_key:
+                    provider = model_info.get("openclaw_provider", "")
+                    model_id = model_info.get("id", "")
+
+                    # 设置 API Key
+                    env_key = model_info.get("env_key", "")
+                    if env_key:
+                        self._ps(f"openclaw config set {env_key} {api_key}")
+                        self._log(f"   已配置 {env_key}")
+
+                    # 设置 Base URL（如果有）
+                    if base_url and provider == "openai":
+                        self._ps(f"openclaw config set OPENAI_BASE_URL {base_url}")
+                        self._log(f"   已配置 Base URL: {base_url}")
+
+                    # 设置默认模型
+                    if provider and model_id:
+                        self._ps(f"openclaw models set {provider}/{model_id}")
+                        self._log(f"   已设置默认模型: {provider}/{model_id}")
+
+                self._log("")
                 self._log("💡 使用说明：")
                 self._log("   1. 如果有自己的 API Key，请在上方填写")
                 self._log("   2. 如果没有，直接点击【🚀 一键启动】")
@@ -934,6 +1056,63 @@ class OnePersonClaw(ctk.CTk):
                 self._log(f"配置已从 {path} 导入。")
             except Exception as e:
                 messagebox.showerror("导入失败", str(e))
+
+    # ── 工具箱功能 ────────────────────────────────────────────
+
+    def _run_doctor(self):
+        self._log("🏥 运行健康检查...")
+        threading.Thread(target=lambda: self._run_openclaw_cmd("doctor"), daemon=True).start()
+
+    def _run_channels_status(self):
+        self._log("📡 查询渠道状态...")
+        threading.Thread(target=lambda: self._run_openclaw_cmd("channels status"), daemon=True).start()
+
+    def _run_models_list(self):
+        self._log("🤖 获取模型列表...")
+        threading.Thread(target=lambda: self._run_openclaw_cmd("models list"), daemon=True).start()
+
+    def _run_sessions(self):
+        self._log("💬 获取会话列表...")
+        threading.Thread(target=lambda: self._run_openclaw_cmd("sessions list"), daemon=True).start()
+
+    def _run_logs(self):
+        self._log("📋 获取日志...")
+        threading.Thread(target=lambda: self._run_openclaw_cmd("logs"), daemon=True).start()
+
+    def _run_openclaw_cmd(self, cmd: str):
+        """Execute openclaw command and display output in log box"""
+        openclaw_cmd = shutil.which("openclaw")
+        if not openclaw_cmd:
+            candidates = [
+                os.path.expanduser("~/AppData/Roaming/npm/openclaw.cmd"),
+                os.path.expanduser("~/AppData/Roaming/npm/openclaw"),
+            ]
+            for c in candidates:
+                if os.path.exists(c):
+                    openclaw_cmd = c
+                    break
+        if not openclaw_cmd:
+            self._log("❌ 未找到 openclaw，请先安装")
+            return
+
+        kwargs = {}
+        if sys.platform == "win32":
+            si = subprocess.STARTUPINFO()
+            si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            si.wShowWindow = subprocess.SW_HIDE
+            kwargs["startupinfo"] = si
+            kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+
+        try:
+            result = subprocess.run(
+                [openclaw_cmd] + cmd.split(),
+                capture_output=True, text=True, timeout=30, **kwargs
+            )
+            output = result.stdout.strip() or result.stderr.strip() or "(无输出)"
+            for line in output.split('\n'):
+                self._log(line)
+        except Exception as e:
+            self._log(f"❌ 执行失败: {e}")
 
     # ── 聊天功能 ──────────────────────────────────────────────
 

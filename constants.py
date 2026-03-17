@@ -1,6 +1,6 @@
 import os
 
-VERSION = "1.4.0"
+VERSION = "0.4.0"
 UPDATE_URL = "https://raw.githubusercontent.com/chatgpt-yunju/OnePersonClaw/main/version.json"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
