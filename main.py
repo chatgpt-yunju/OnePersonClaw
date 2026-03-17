@@ -258,6 +258,37 @@ class OnePersonClaw(ctk.CTk):
             font=ctk.CTkFont(size=14)
         ).pack(side="left", padx=6)
 
+        # 聊天框
+        chat_frame = ctk.CTkFrame(self, fg_color="transparent")
+        chat_frame.pack(fill="x", padx=30, pady=(4, 0))
+
+        ctk.CTkLabel(
+            chat_frame, text="💬 与 OpenClaw 对话",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).pack(anchor="w")
+
+        self.chat_box = ctk.CTkTextbox(
+            chat_frame, height=120, font=ctk.CTkFont(size=11),
+            state="disabled"
+        )
+        self.chat_box.pack(fill="x", pady=(4, 4))
+
+        chat_input_row = ctk.CTkFrame(chat_frame, fg_color="transparent")
+        chat_input_row.pack(fill="x")
+
+        self.chat_input = ctk.CTkEntry(
+            chat_input_row, placeholder_text="输入消息，按 Enter 或点击发送...",
+            font=ctk.CTkFont(size=12)
+        )
+        self.chat_input.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        self.chat_input.bind("<Return>", lambda e: self._send_chat())
+
+        ctk.CTkButton(
+            chat_input_row, text="发送",
+            command=self._send_chat, width=70, height=32,
+            font=ctk.CTkFont(size=12)
+        ).pack(side="left")
+
         # 配置导入/导出按钮区
         cfg_frame = ctk.CTkFrame(self, fg_color="transparent")
         cfg_frame.pack(pady=(2, 6))
@@ -708,6 +739,59 @@ class OnePersonClaw(ctk.CTk):
                 self._log(f"配置已从 {path} 导入。")
             except Exception as e:
                 messagebox.showerror("导入失败", str(e))
+
+    # ── 聊天功能 ──────────────────────────────────────────────
+
+    def _append_chat(self, text: str):
+        def _do():
+            self.chat_box.configure(state="normal")
+            self.chat_box.insert("end", text + "\n")
+            self.chat_box.see("end")
+            self.chat_box.configure(state="disabled")
+        self.after(0, _do)
+
+    def _send_chat(self):
+        msg = self.chat_input.get().strip()
+        if not msg:
+            return
+        self.chat_input.delete(0, "end")
+        self._append_chat(f"你：{msg}")
+        threading.Thread(target=self._run_chat, args=(msg,), daemon=True).start()
+
+    def _run_chat(self, msg: str):
+        openclaw_cmd = shutil.which("openclaw")
+        if not openclaw_cmd:
+            candidates = [
+                os.path.expanduser("~/.npm-global/bin/openclaw"),
+                os.path.expanduser("~/AppData/Roaming/npm/openclaw.cmd"),
+                r"C:\Users\Public\AppData\Roaming\npm\openclaw.cmd",
+            ]
+            for c in candidates:
+                if os.path.isfile(c):
+                    openclaw_cmd = c
+                    break
+        if not openclaw_cmd:
+            self._append_chat("[错误] 未找到 openclaw，请先安装。")
+            return
+        try:
+            result = subprocess.run(
+                [openclaw_cmd, "agent", "--message", msg, "--json"],
+                capture_output=True, text=True, timeout=60
+            )
+            output = result.stdout.strip()
+            if output:
+                try:
+                    data = json.loads(output)
+                    reply = data.get("reply") or data.get("message") or data.get("content") or output
+                except Exception:
+                    reply = output
+            else:
+                reply = result.stderr.strip() or "（无回复）"
+            self._append_chat(f"OpenClaw：{reply}")
+        except subprocess.TimeoutExpired:
+            self._append_chat("[错误] 请求超时（60s）。")
+        except Exception as e:
+            self._append_chat(f"[错误] {e}")
 
     # ── 更新检查 ──────────────────────────────────────────────
 
