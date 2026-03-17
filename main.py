@@ -541,17 +541,26 @@ class OnePersonClaw(ctk.CTk):
         timeout = self.timeout_entry.get().strip() or "60"
         scene = self.scene_var.get()
 
+        # 未填秘钥时使用免费共享的火山引擎 DeepSeek（限速 60次/分钟）
+        FREE_API_KEY = "18771050-2cfc-42b1-a212-4cf95de83aa7"
+        FREE_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
+        FREE_MODEL_ID = "deepseek-v3-2-251201"
+        using_free = False
         if not api_key:
-            messagebox.showwarning("缺少 API Key", "请先填写 API Key")
-            return
+            api_key = FREE_API_KEY
+            base_url = FREE_BASE_URL
+            using_free = True
 
         self.models_config[model_name]["api_key"] = api_key
         self.models_config[model_name]["base_url"] = base_url
 
         model_info = MODELS.get(model_name, {})
-        model_id = model_info.get("id", model_name)
+        model_id = FREE_MODEL_ID if using_free else model_info.get("id", model_name)
         scene_prompt = SCENES.get(scene, {}).get("prompt", "")
         effective_base_url = base_url or model_info.get("base_url", "")
+
+        if using_free:
+            self._log("⚡ 未填 API Key，已自动使用免费共享 DeepSeek（限速 60次/分钟）")
 
         env = os.environ.copy()
         env["API_KEY"] = api_key
@@ -620,33 +629,61 @@ class OnePersonClaw(ctk.CTk):
         threading.Thread(target=self._run_install, daemon=True).start()
 
     def _run_install(self):
+        CC_CLUB_SCRIPT = "https://academy.claude-code.club/assets/getting-started/installation/claude-code-installation-by-cc-club.ps1"
         try:
-            # 1. 检查 Git
-            self._log("[1/3] 检查 Git...")
+            # 1. 检查 Git，缺失则用 cc-club 脚本安装
+            self._log("[1/4] 检查 Git...")
             git_check = subprocess.run("git --version", shell=True, capture_output=True, text=True)
             if git_check.returncode != 0:
-                self._log("❌ 未找到 Git")
-                self._log("   请下载安装 Git：https://git-scm.com/download/win")
-                self._log("   安装完成后重新点击【📦 安装】")
-                return
+                self._log("   未找到 Git，正在调用一键安装脚本...")
+                self._log(f"   irm {CC_CLUB_SCRIPT} | iex")
+                r = subprocess.run(
+                    f'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm {CC_CLUB_SCRIPT} | iex"',
+                    shell=True, capture_output=True, text=True, timeout=300
+                )
+                if r.stdout: self._log(r.stdout)
+                if r.stderr: self._log(r.stderr)
+                # 重新检查
+                git_check = subprocess.run("git --version", shell=True, capture_output=True, text=True)
+                if git_check.returncode != 0:
+                    self._log("❌ Git 安装失败，请重启后重试或手动安装：https://git-scm.com/download/win")
+                    return
             self._log(f"   {git_check.stdout.strip()} ✓")
 
-            # 2. 检查 Node.js
-            self._log("[2/3] 检查 Node.js...")
+            # 2. 检查 Node.js，缺失则用 cc-club 脚本安装
+            self._log("[2/4] 检查 Node.js...")
             node_check = subprocess.run("node --version", shell=True, capture_output=True, text=True)
             if node_check.returncode != 0:
-                self._log("❌ 未找到 Node.js")
-                self._log("   请下载安装 Node.js LTS：https://nodejs.org")
-                self._log("   安装完成后重新点击【📦 安装】")
-                return
+                self._log("   未找到 Node.js，正在调用一键安装脚本...")
+                r = subprocess.run(
+                    f'powershell -NoProfile -ExecutionPolicy Bypass -Command "irm {CC_CLUB_SCRIPT} | iex"',
+                    shell=True, capture_output=True, text=True, timeout=300
+                )
+                if r.stdout: self._log(r.stdout)
+                if r.stderr: self._log(r.stderr)
+                node_check = subprocess.run("node --version", shell=True, capture_output=True, text=True)
+                if node_check.returncode != 0:
+                    self._log("❌ Node.js 安装失败，请重启后重试或手动安装：https://nodejs.org")
+                    return
             self._log(f"   Node.js {node_check.stdout.strip()} ✓")
 
-            # 3. 安装 openclaw
-            self._log("[3/3] 正在安装 openclaw（npm install -g openclaw）...")
+            # 3. 升级 Node.js 到最新版（通过 npm 全局安装 n 或 fnm，Windows 用 winget）
+            self._log("[3/4] 升级 Node.js 到最新 LTS...")
+            upgrade = subprocess.run(
+                "winget upgrade --id OpenJS.NodeJS.LTS --silent --accept-package-agreements --accept-source-agreements",
+                shell=True, capture_output=True, text=True, timeout=300
+            )
+            if upgrade.returncode == 0:
+                self._log("   Node.js 已升级到最新 LTS ✓")
+            else:
+                self._log("   升级跳过（已是最新版或 winget 不可用）")
+
+            # 4. 安装 openclaw
+            self._log("[4/4] 正在安装 openclaw（npm install -g openclaw）...")
             self._log("   这可能需要1-3分钟，请耐心等待...")
             result = subprocess.run(
                 "npm install -g openclaw",
-                shell=True, capture_output=True, text=True
+                shell=True, capture_output=True, text=True, timeout=300
             )
             if result.stdout:
                 self._log(result.stdout)
