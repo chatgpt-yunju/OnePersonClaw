@@ -46,24 +46,71 @@ try {
     }
 } catch {
     Write-Host "   未找到 Git，正在安装..." -ForegroundColor Yellow
-    $chocoInstalled = Get-Command choco -ErrorAction SilentlyContinue
-    if ($chocoInstalled) {
-        Write-Host "   使用 Chocolatey 安装 Git..." -ForegroundColor Gray
-        choco install git -y --no-progress
-    } else {
-        Write-Host "   使用 winget 安装 Git..." -ForegroundColor Gray
-        winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements
-    }
 
-    # 刷新环境变量
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
-    $gitVersion = git --version 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "   $gitVersion ✓" -ForegroundColor Gray
+    # 尝试 winget
+    $wingetInstalled = Get-Command winget -ErrorAction SilentlyContinue
+    if ($wingetInstalled) {
+        Write-Host "   使用 winget 安装 Git..." -ForegroundColor Gray
+        winget install Git.Git --accept-source-agreements --accept-package-agreements
+
+        # 刷新环境变量
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+        $gitVersion = git --version 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "   $gitVersion ✓" -ForegroundColor Gray
+        } else {
+            Write-Host "   ❌ Git 安装失败，请重启后重试" -ForegroundColor Red
+            Read-Host "按回车键退出"
+            exit 1
+        }
     } else {
-        Write-Host "   ❌ Git 安装失败，请重启后重试或手动安装: https://git-scm.com/download/win" -ForegroundColor Red
-        Read-Host "按回车键退出"
-        exit 1
+        # 下载并安装 Git
+        Write-Host "   下载 Git 安装包..." -ForegroundColor Gray
+        $gitUrls = @(
+            "https://mirror.ghproxy.com/https://github.com/git-for-windows/git/releases/download/v2.51.2.windows.1/Git-2.51.2-64-bit.exe",
+            "https://ghproxy.net/https://github.com/git-for-windows/git/releases/download/v2.51.2.windows.1/Git-2.51.2-64-bit.exe",
+            "https://github.com/git-for-windows/git/releases/download/v2.51.2.windows.1/Git-2.51.2-64-bit.exe"
+        )
+        $installerPath = "$env:TEMP\git-installer.exe"
+        $downloaded = $false
+
+        foreach ($gitUrl in $gitUrls) {
+            try {
+                $ProgressPreference = 'SilentlyContinue'
+                Invoke-WebRequest -Uri $gitUrl -OutFile $installerPath -TimeoutSec 60
+                $ProgressPreference = 'Continue'
+                if (Test-Path $installerPath) {
+                    Write-Host "   下载完成 ✓" -ForegroundColor Gray
+                    $downloaded = $true
+                    break
+                }
+            } catch {
+                Write-Host "   镜像失败，尝试下一个..." -ForegroundColor Yellow
+            }
+        }
+
+        if ($downloaded) {
+            Write-Host "   正在安装 Git..." -ForegroundColor Gray
+            Start-Process $installerPath -ArgumentList "/VERYSILENT", "/NORESTART", "/NOCANCEL", "/SP-", "/CLOSEAPPLICATIONS", "/RESTARTAPPLICATIONS" -Wait
+            Remove-Item $installerPath -Force -ErrorAction SilentlyContinue
+
+            # 刷新环境变量
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+            $gitVersion = git --version 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "   $gitVersion ✓" -ForegroundColor Gray
+            } else {
+                Write-Host "   ❌ Git 安装失败，请重启后重试或手动安装: https://git-scm.com/download/win" -ForegroundColor Red
+                Read-Host "按回车键退出"
+                exit 1
+            }
+        } else {
+            Write-Host "   ❌ Git 下载失败，请手动安装: https://git-scm.com/download/win" -ForegroundColor Red
+            Read-Host "按回车键退出"
+            exit 1
+        }
     }
 }
 

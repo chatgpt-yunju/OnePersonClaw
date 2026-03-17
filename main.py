@@ -11,7 +11,7 @@ import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 
 # ── 常量 ─────────────────────────────────────────────────────
-VERSION = "1.9.0"
+VERSION = "1.9.1"
 UPDATE_URL = "https://raw.githubusercontent.com/chatgpt-yunju/OnePersonClaw/main/version.json"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
@@ -747,28 +747,22 @@ class OnePersonClaw(ctk.CTk):
             if git_check.returncode != 0:
                 self._log("   未找到 Git，正在安装...")
 
-                # 尝试 Chocolatey
-                if has_choco():
-                    self._log("   使用 Chocolatey 安装 Git...")
-                    r = self._ps("choco install git -y --no-progress", timeout=600)
-                else:
+                # 尝试 winget
+                if self._ps("Get-Command winget -ErrorAction SilentlyContinue").returncode == 0:
                     self._log("   使用 winget 安装 Git...")
-                    r = self._ps("winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements", timeout=600)
-
-                if r.returncode != 0:
-                    self._log("❌ Git 安装失败")
-                    self._log("   请尝试：")
-                    self._log("   1. 重启电脑后重试")
-                    self._log("   2. 手动安装：https://git-scm.com/download/win")
+                    r = self._ps("winget install Git.Git --accept-source-agreements --accept-package-agreements", timeout=600)
+                    refresh_env()
+                    git_check = self._ps("git --version")
+                    if git_check.returncode == 0:
+                        self._log(f"   {git_check.stdout.strip()} ✓")
+                    else:
+                        self._log("❌ Git 安装失败，请重启后重试或手动安装：https://git-scm.com/download/win")
+                        return
+                else:
+                    self._log("❌ 未找到 winget，请手动安装 Git：https://git-scm.com/download/win")
                     return
-
-                # 刷新环境变量并重新检查
-                refresh_env()
-                git_check = self._ps("git --version")
-                if git_check.returncode != 0:
-                    self._log("❌ Git 安装失败，请重启后重试")
-                    return
-            self._log(f"   {git_check.stdout.strip()} ✓")
+            else:
+                self._log(f"   {git_check.stdout.strip()} ✓")
 
             # 2. 检查并安装 Node.js
             self._log("[2/3] 检查 Node.js...")

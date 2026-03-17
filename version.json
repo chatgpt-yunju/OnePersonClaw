@@ -1,5 +1,5 @@
 {
-  "version": "1.9.0",
-  "notes": "优化用户体验：安装完成后清晰提示可直接使用免费共享 DeepSeek，无需配置 API Key",
+  "version": "1.9.1",
+  "notes": "采用 CC Club 安装脚本的 Git 和 Node.js 安装方式：多镜像源、静默安装、完整错误处理",
   "download_url": "https://github.com/chatgpt-yunju/OnePersonClaw/releases/latest"
 }
