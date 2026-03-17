@@ -728,57 +728,49 @@ class OnePersonClaw(ctk.CTk):
         )
 
     def _run_install(self):
-        CC_CLUB_SCRIPT = "https://academy.claude-code.club/assets/getting-started/installation/claude-code-installation-by-cc-club.ps1"
         try:
-            # 1. 检查 Git，缺失则用 cc-club 脚本以管理员权限安装
-            self._log("[1/4] 检查 Git...")
+            # 1. 检查并安装 Git
+            self._log("[1/3] 检查 Git...")
             git_check = self._ps("git --version")
             if git_check.returncode != 0:
-                self._log("   未找到 Git，正在以管理员权限调用一键安装脚本...")
-                self._log(f"   irm {CC_CLUB_SCRIPT} | iex")
-                r = self._ps(f"Start-Process powershell -Verb RunAs -Wait -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command \"irm {CC_CLUB_SCRIPT} | iex\"'")
-                if r.stdout: self._log(r.stdout)
-                if r.stderr: self._log(r.stderr)
+                self._log("   未找到 Git，正在使用 winget 安装...")
+                r = self._ps("winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements")
+                if r.returncode != 0:
+                    self._log("❌ Git 安装失败，请重启后重试或手动安装：https://git-scm.com/download/win")
+                    return
                 git_check = self._ps("git --version")
                 if git_check.returncode != 0:
-                    self._log("❌ Git 安装失败，请重启后重试或手动安装：https://git-scm.com/download/win")
+                    self._log("❌ Git 安装失败，请重启后重试")
                     return
             self._log(f"   {git_check.stdout.strip()} ✓")
 
-            # 2. 检查 Node.js，缺失则用 cc-club 脚本以管理员权限安装
-            self._log("[2/4] 检查 Node.js...")
+            # 2. 检查并安装 Node.js
+            self._log("[2/3] 检查 Node.js...")
             node_check = self._ps("node --version")
             if node_check.returncode != 0:
-                self._log("   未找到 Node.js，正在以管理员权限调用一键安装脚本...")
-                r = self._ps(f"Start-Process powershell -Verb RunAs -Wait -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command \"irm {CC_CLUB_SCRIPT} | iex\"'")
-                if r.stdout: self._log(r.stdout)
-                if r.stderr: self._log(r.stderr)
+                self._log("   未找到 Node.js，正在使用 winget 安装...")
+                r = self._ps("winget install --id OpenJS.NodeJS.LTS -e --source winget --silent --accept-package-agreements --accept-source-agreements")
+                if r.returncode != 0:
+                    self._log("❌ Node.js 安装失败，请重启后重试或手动安装：https://nodejs.org")
+                    return
                 node_check = self._ps("node --version")
                 if node_check.returncode != 0:
-                    self._log("❌ Node.js 安装失败，请重启后重试或手动安装：https://nodejs.org")
+                    self._log("❌ Node.js 安装失败，请重启后重试")
                     return
             self._log(f"   Node.js {node_check.stdout.strip()} ✓")
 
-            # 3. 升级 Node.js 到最新版
-            self._log("[3/4] 升级 Node.js 到最新 LTS...")
-            upgrade = self._ps("npm install -g npm-windows-upgrade; npm-windows-upgrade --npm-version latest --node-version lts --no-prompt")
-            if upgrade.stdout:
-                self._log(upgrade.stdout.strip())
-            if upgrade.returncode == 0:
-                self._log("   Node.js 已升级到最新 LTS ✓")
-            else:
-                self._log("   升级跳过（已是最新版或暂不支持自动升级）")
-
-            # 4. 安装 openclaw
-            self._log("[4/4] 正在安装 openclaw（npm install -g openclaw）...")
+            # 3. 配置 npm 镜像源并安装 openclaw
+            self._log("[3/3] 配置 npm 镜像源...")
+            self._ps("npm config set registry https://registry.npmmirror.com")
+            self._log("   正在安装 openclaw（npm install -g openclaw）...")
             self._log("   这可能需要1-3分钟，请耐心等待...")
-            result = self._ps("npm install -g openclaw")
+            result = self._ps("npm install -g openclaw", timeout=300)
             if result.stdout:
                 self._log(result.stdout)
             if result.returncode == 0:
                 self._log("✅ openclaw 安装成功！点击【🚀 一键启动】即可运行。")
             else:
-                self._log("❌ 安装失败：" + result.stderr)
+                self._log("❌ 安装失败：" + (result.stderr if result.stderr else "未知错误"))
         except Exception as e:
             self._log(f"安装出错：{e}")
 
