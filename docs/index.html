@@ -140,7 +140,7 @@
     <h1>OnePersonClaw</h1>
     <p class="tagline">一个人，一套爪子，干掉一个团队</p>
     <div class="btn-group">
-      <a class="btn btn-primary" href="/OnePersonClaw.exe">⬇ 下载 EXE（v1.8.0）</a>
+      <a class="btn btn-primary" href="/OnePersonClaw.exe">⬇ 下载 EXE（v1.8.5）</a>
       <a class="btn btn-secondary" href="https://github.com/chatgpt-yunju/OnePersonClaw/releases/latest" target="_blank">GitHub 历史版本</a>
       <a class="btn btn-secondary" href="https://github.com/chatgpt-yunju/OnePersonClaw" target="_blank">GitHub 源码</a>
     </div>
@@ -240,6 +240,19 @@
     </div>
     <p>QQ 交流群：665889946 &nbsp;·&nbsp; by 常云举19966519194 &nbsp;·&nbsp; © 2026 OnePersonClaw</p>
   </footer>
+
+<!-- 右下角悬浮扫码入群按钮 -->
+<div id="float-btn" onclick="document.getElementById('qr-modal').style.display='flex'" style="position:fixed;bottom:32px;right:32px;z-index:9999;background:linear-gradient(135deg,#1a6eef,#7a3aef);color:#fff;border-radius:50px;padding:12px 20px;cursor:pointer;box-shadow:0 4px 20px rgba(74,158,255,0.5);font-size:14px;font-weight:600;user-select:none;">💬 扫码入群</div>
+
+<!-- 弹窗遮罩 -->
+<div id="qr-modal" onclick="this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;">
+  <div onclick="event.stopPropagation()" style="background:#1a1a2e;border-radius:16px;padding:24px;text-align:center;max-width:320px;width:90%;">
+    <p style="color:#e0e0e0;font-size:15px;font-weight:600;margin-bottom:16px;">扫码加入 QQ 交流群</p>
+    <img src="/qq-group.jpeg" alt="QQ群二维码" style="width:100%;border-radius:8px;" />
+    <p style="color:#888;font-size:13px;margin-top:12px;">QQ交流群：665889946</p>
+    <button onclick="document.getElementById('qr-modal').style.display='none'" style="margin-top:16px;background:#333;color:#ccc;border:none;border-radius:8px;padding:8px 24px;cursor:pointer;font-size:13px;">关闭</button>
+  </div>
+</div>
 
 </body>
 </html>
