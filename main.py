@@ -625,7 +625,7 @@ class OnePersonClaw(ctk.CTk):
 
         try:
             self.process = subprocess.Popen(
-                [openclaw_cmd, "gateway", "start"],
+                [openclaw_cmd, "dashboard"],
                 env=env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -635,8 +635,6 @@ class OnePersonClaw(ctk.CTk):
             self.launch_btn.configure(fg_color="#1a5a1a")
             self._log(f"已启动：{model_name} @ :{port}")
             threading.Thread(target=self._read_output, daemon=True).start()
-            # 打开 openclaw dashboard
-            webbrowser.open(f"http://localhost:{port}")
         except Exception as e:
             messagebox.showerror("启动失败", str(e))
 
