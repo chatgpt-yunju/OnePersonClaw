@@ -515,6 +515,14 @@ class OnePersonClaw(ctk.CTk):
         self.base_url_entry.delete(0, "end")
         self.base_url_entry.insert(0, cfg.get("base_url", ""))
         self._update_cost(self.usage_var.get())
+        # 同步更新 openclaw 配置
+        model_info = MODELS.get(name, {})
+        model_id = model_info.get("id", "")
+        if model_id:
+            threading.Thread(
+                target=lambda: self._ps(f"openclaw config set model {model_id}"),
+                daemon=True
+            ).start()
 
     def _on_scene_change(self, name):
         scene = SCENES.get(name, {})
