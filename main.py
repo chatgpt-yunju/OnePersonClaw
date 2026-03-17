@@ -178,6 +178,37 @@ class OnePersonClaw(ctk.CTk):
             font=ctk.CTkFont(size=13), text_color="#888"
         ).pack(pady=(2, 12))
 
+        # 聊天框（置于模型选择上方）
+        chat_frame = ctk.CTkFrame(self, fg_color="transparent")
+        chat_frame.pack(fill="x", padx=30, pady=(4, 0))
+
+        ctk.CTkLabel(
+            chat_frame, text="💬 与 OpenClaw 对话",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).pack(anchor="w")
+
+        self.chat_box = ctk.CTkTextbox(
+            chat_frame, height=120, font=ctk.CTkFont(size=11),
+            state="disabled"
+        )
+        self.chat_box.pack(fill="x", pady=(4, 4))
+
+        chat_input_row = ctk.CTkFrame(chat_frame, fg_color="transparent")
+        chat_input_row.pack(fill="x")
+
+        self.chat_input = ctk.CTkEntry(
+            chat_input_row, placeholder_text="输入消息，按 Enter 或点击发送...",
+            font=ctk.CTkFont(size=12)
+        )
+        self.chat_input.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        self.chat_input.bind("<Return>", lambda e: self._send_chat())
+
+        ctk.CTkButton(
+            chat_input_row, text="发送",
+            command=self._send_chat, width=70, height=32,
+            font=ctk.CTkFont(size=12)
+        ).pack(side="left")
+
         # 主体
         body = ctk.CTkFrame(self)
         body.pack(fill="both", expand=True, padx=30)
@@ -848,16 +879,26 @@ class OnePersonClaw(ctk.CTk):
         if not openclaw_cmd:
             self._append_chat("[错误] 未找到 openclaw，请先安装。")
             return
+        # 隐藏 Windows 控制台窗口
+        kwargs = {}
+        if sys.platform == "win32":
+            kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
         try:
             result = subprocess.run(
-                [openclaw_cmd, "agent", "--agent", "main", "--local", "--message", msg, "--json"],
-                capture_output=True, text=True, timeout=60
+                [openclaw_cmd, "agent", "--agent", "main", "--message", msg, "--json"],
+                capture_output=True, text=True, timeout=60, **kwargs
             )
             output = result.stdout.strip()
             if output:
                 try:
                     data = json.loads(output)
-                    reply = data.get("reply") or data.get("message") or data.get("content") or output
+                    # 优先取 payloads[0].text
+                    payloads = data.get("payloads", [])
+                    if payloads and isinstance(payloads, list):
+                        reply = payloads[0].get("text", "") or "（无回复）"
+                    else:
+                        reply = (data.get("reply") or data.get("message")
+                                 or data.get("content") or "（无回复）")
                 except Exception:
                     reply = output
             else:
@@ -878,7 +919,7 @@ class OnePersonClaw(ctk.CTk):
 
     def _check_update(self, manual=False):
         try:
-            url = "https://raw.githubusercontent.com/changyunju/OnePersonClaw/main/version.json"
+            url = "https://raw.githubusercontent.com/chatgpt-yunju/OnePersonClaw/main/version.json"
             with urllib.request.urlopen(url, timeout=5) as resp:
                 info = json.loads(resp.read().decode())
             latest = info.get("version", VERSION)
