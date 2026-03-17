@@ -11,7 +11,7 @@ import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 
 # ── 常量 ─────────────────────────────────────────────────────
-VERSION = "1.8.8"
+VERSION = "1.8.9"
 UPDATE_URL = "https://raw.githubusercontent.com/chatgpt-yunju/OnePersonClaw/main/version.json"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
@@ -771,27 +771,47 @@ class OnePersonClaw(ctk.CTk):
             node_check = self._ps("node --version")
             if node_check.returncode != 0:
                 self._log("   未找到 Node.js，正在安装...")
+                node_installed = False
 
                 # 尝试 Chocolatey
                 if has_choco():
                     self._log("   使用 Chocolatey 安装 Node.js LTS...")
                     r = self._ps("choco install nodejs-lts -y --no-progress", timeout=600)
-                else:
-                    self._log("   使用 winget 安装 Node.js LTS...")
-                    r = self._ps("winget install --id OpenJS.NodeJS.LTS -e --source winget --silent --accept-package-agreements --accept-source-agreements", timeout=600)
+                    refresh_env()
+                    if self._ps("node --version").returncode == 0:
+                        node_installed = True
 
-                if r.returncode != 0:
+                # 尝试 winget
+                if not node_installed:
+                    self._log("   使用 winget 安装 Node.js...")
+                    # 先尝试最新版
+                    r = self._ps("winget install --id OpenJS.NodeJS --accept-source-agreements --accept-package-agreements", timeout=600)
+                    if r.returncode != 0:
+                        self._log("   尝试安装 LTS 版本...")
+                        r = self._ps("winget install --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements", timeout=600)
+                    refresh_env()
+                    if self._ps("node --version").returncode == 0:
+                        node_installed = True
+
+                # 验证安装（最多 3 次）
+                if node_installed:
+                    self._log("   验证 Node.js 安装...")
+                    for attempt in range(3):
+                        refresh_env()
+                        node_check = self._ps("node --version")
+                        if node_check.returncode == 0:
+                            break
+                        if attempt < 2:
+                            self._ps("Start-Sleep -Seconds 2")
+
+                # 最终检查
+                node_check = self._ps("node --version")
+                if node_check.returncode != 0:
                     self._log("❌ Node.js 安装失败")
                     self._log("   请尝试：")
                     self._log("   1. 重启电脑后重试")
                     self._log("   2. 手动安装：https://nodejs.org")
-                    return
-
-                # 刷新环境变量并重新检查
-                refresh_env()
-                node_check = self._ps("node --version")
-                if node_check.returncode != 0:
-                    self._log("❌ Node.js 安装失败，请重启后重试")
+                    self._log("   3. 或下载 MSI：https://npmmirror.com/mirrors/node/v22.13.1/node-v22.13.1-x64.msi")
                     return
             self._log(f"   Node.js {node_check.stdout.strip()} ✓")
 

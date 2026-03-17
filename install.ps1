@@ -79,21 +79,100 @@ try {
     }
 } catch {
     Write-Host "   未找到 Node.js，正在安装..." -ForegroundColor Yellow
+    $nodeInstalled = $false
+
+    # 尝试 Chocolatey
     $chocoInstalled = Get-Command choco -ErrorAction SilentlyContinue
     if ($chocoInstalled) {
-        Write-Host "   使用 Chocolatey 安装 Node.js..." -ForegroundColor Gray
+        Write-Host "   使用 Chocolatey 安装 Node.js LTS..." -ForegroundColor Gray
         choco install nodejs-lts -y --no-progress
-    } else {
-        Write-Host "   使用 winget 安装 Node.js..." -ForegroundColor Gray
-        winget install --id OpenJS.NodeJS.LTS -e --source winget --silent --accept-package-agreements --accept-source-agreements
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        Start-Sleep -Seconds 2
+        $nodeVersion = node --version 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            $nodeInstalled = $true
+        }
     }
 
-    # 刷新环境变量
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    # 尝试 winget
+    if (-not $nodeInstalled) {
+        $wingetInstalled = Get-Command winget -ErrorAction SilentlyContinue
+        if ($wingetInstalled) {
+            Write-Host "   使用 winget 安装 Node.js..." -ForegroundColor Gray
+            winget install --id OpenJS.NodeJS --accept-source-agreements --accept-package-agreements 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "   尝试安装 LTS 版本..." -ForegroundColor Gray
+                winget install --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements 2>&1 | Out-Null
+            }
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            Start-Sleep -Seconds 2
+            $nodeVersion = node --version 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                $nodeInstalled = $true
+            }
+        }
+    }
+
+    # 尝试下载 MSI 安装
+    if (-not $nodeInstalled) {
+        Write-Host "   下载 Node.js 安装包..." -ForegroundColor Gray
+        $nodeUrls = @(
+            "https://npmmirror.com/mirrors/node/v22.13.1/node-v22.13.1-x64.msi",
+            "https://cdn.npmmirror.com/binaries/node/v22.13.1/node-v22.13.1-x64.msi",
+            "https://nodejs.org/dist/v22.13.1/node-v22.13.1-x64.msi"
+        )
+        $installerPath = "$env:TEMP\nodejs-installer.msi"
+        $downloaded = $false
+
+        foreach ($nodeUrl in $nodeUrls) {
+            try {
+                $ProgressPreference = 'SilentlyContinue'
+                Invoke-WebRequest -Uri $nodeUrl -OutFile $installerPath -TimeoutSec 120
+                $ProgressPreference = 'Continue'
+                if ((Test-Path $installerPath) -and ((Get-Item $installerPath).Length -gt 1000000)) {
+                    Write-Host "   下载完成 ✓" -ForegroundColor Gray
+                    $downloaded = $true
+                    break
+                }
+            } catch {
+                Write-Host "   镜像失败，尝试下一个..." -ForegroundColor Yellow
+            }
+        }
+
+        if ($downloaded) {
+            Write-Host "   正在安装 Node.js..." -ForegroundColor Gray
+            $installProcess = Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/quiet", "/norestart" -Wait -PassThru
+            if ($installProcess.ExitCode -eq 0) {
+                $nodeInstalled = $true
+            } elseif ($installProcess.ExitCode -eq 1603) {
+                Write-Host "   尝试备选安装方式..." -ForegroundColor Yellow
+                $altProcess = Start-Process msiexec.exe -ArgumentList "/i", "`"$installerPath`"", "/passive", "/norestart" -Wait -PassThru
+                if ($altProcess.ExitCode -eq 0) {
+                    $nodeInstalled = $true
+                }
+            }
+            Remove-Item $installerPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # 验证安装
+    if ($nodeInstalled) {
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+        $verifyAttempts = 0
+        while ($verifyAttempts -lt 3) {
+            $verifyAttempts++
+            Start-Sleep -Seconds 2
+            $nodeVersion = node --version 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "   Node.js $nodeVersion ✓" -ForegroundColor Gray
+                break
+            }
+        }
+    }
+
+    # 最终检查
     $nodeVersion = node --version 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "   Node.js $nodeVersion ✓" -ForegroundColor Gray
-    } else {
+    if ($LASTEXITCODE -ne 0) {
         Write-Host "   ❌ Node.js 安装失败，请重启后重试或手动安装: https://nodejs.org" -ForegroundColor Red
         Read-Host "按回车键退出"
         exit 1

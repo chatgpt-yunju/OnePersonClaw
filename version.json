@@ -1,5 +1,5 @@
 {
-  "version": "1.8.8",
-  "notes": "修复 Node.js 安装失败问题：添加 Chocolatey 备选方案、刷新环境变量、延长安装超时时间",
+  "version": "1.8.9",
+  "notes": "优化 Node.js 安装：多镜像源、MSI 备选方案、3 次验证重试，参考 CC Club 安装脚本",
   "download_url": "https://github.com/chatgpt-yunju/OnePersonClaw/releases/latest"
 }
