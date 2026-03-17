@@ -11,7 +11,7 @@ import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 
 # ── 常量 ─────────────────────────────────────────────────────
-VERSION = "1.9.1"
+VERSION = "1.9.2"
 UPDATE_URL = "https://raw.githubusercontent.com/chatgpt-yunju/OnePersonClaw/main/version.json"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
