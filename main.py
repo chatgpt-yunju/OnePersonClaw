@@ -62,6 +62,33 @@ MODELS = {
         "cost_normal": "免费",
         "cost_heavy": "免费",
     },
+    "CC Club - Claude Code": {
+        "key": "ccclub_claude",
+        "env_key": "OPENAI_API_KEY",
+        "base_url": "https://claude-code.club/api",
+        "cost_light": "积分制",
+        "cost_normal": "积分制",
+        "cost_heavy": "积分制",
+        "key_url": "https://customer.claude-code.club/invite/CNCQSH",
+    },
+    "CC Club - Codex": {
+        "key": "ccclub_codex",
+        "env_key": "OPENAI_API_KEY",
+        "base_url": "https://claude-code.club/api",
+        "cost_light": "积分制",
+        "cost_normal": "积分制",
+        "cost_heavy": "积分制",
+        "key_url": "https://customer.claude-code.club/invite/CNCQSH",
+    },
+    "CC Club - Gemini": {
+        "key": "ccclub_gemini",
+        "env_key": "OPENAI_API_KEY",
+        "base_url": "https://claude-code.club/api",
+        "cost_light": "积分制",
+        "cost_normal": "积分制",
+        "cost_heavy": "积分制",
+        "key_url": "https://customer.claude-code.club/invite/CNCQSH",
+    },
 }
 
 SCENES = {
@@ -141,6 +168,9 @@ class OnePersonClaw(ctk.CTk):
         self.geometry("760x700")
         self.resizable(True, True)
         self.minsize(700, 600)
+
+        # 初始化属性
+        self.current_key_url = ""
         self.process = None
         # 每个模型独立存储 key 和 base_url
         self.models_config = {name: {"api_key": "", "base_url": m.get("base_url", "")}
@@ -411,6 +441,16 @@ class OnePersonClaw(ctk.CTk):
             font=ctk.CTkFont(size=13, weight="bold")
         ).pack(anchor="w", pady=(0, 2))
 
+        # Key 获取链接（动态显示）
+        self.key_url_label = ctk.CTkLabel(
+            left, text="",
+            font=ctk.CTkFont(size=11),
+            text_color="#50c0ff",
+            cursor="hand2"
+        )
+        self.key_url_label.pack(anchor="w", pady=(0, 2))
+        self.key_url_label.bind("<Button-1>", self._open_key_url)
+
         self.api_key_entry = ctk.CTkEntry(
             left, width=220, show="*",
             placeholder_text="输入 API Key",
@@ -515,14 +555,28 @@ class OnePersonClaw(ctk.CTk):
         self.base_url_entry.delete(0, "end")
         self.base_url_entry.insert(0, cfg.get("base_url", ""))
         self._update_cost(self.usage_var.get())
-        # 同步更新 openclaw 配置
+
+        # 显示 key 获取链接（如果有）
         model_info = MODELS.get(name, {})
+        key_url = model_info.get("key_url", "")
+        if key_url:
+            self.key_url_label.configure(text="🔗 点击获取 API Key")
+            self.current_key_url = key_url
+        else:
+            self.key_url_label.configure(text="")
+            self.current_key_url = ""
+
+        # 同步更新 openclaw 配置
         model_id = model_info.get("id", "")
         if model_id:
             threading.Thread(
                 target=lambda: self._ps(f"openclaw config set model {model_id}"),
                 daemon=True
             ).start()
+
+    def _open_key_url(self, event):
+        if hasattr(self, 'current_key_url') and self.current_key_url:
+            webbrowser.open(self.current_key_url)
 
     def _on_scene_change(self, name):
         scene = SCENES.get(name, {})
