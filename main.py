@@ -304,6 +304,27 @@ class OnePersonClaw(ctk.CTk):
             font=ctk.CTkFont(size=12)
         ).pack(side="left")
 
+        # 常用命令速查 TabView
+        cmd_tab = ctk.CTkTabview(self, height=130)
+        cmd_tab.pack(fill="x", padx=20, pady=(4, 0))
+        CMD_GROUPS = [
+            ("模型", ["/model", "/model gpt-4o", "/model claude-3-5-sonnet", "openclaw models list", "openclaw models status", "openclaw models set openai/gpt-4o"]),
+            ("认证", ["openclaw models auth setup-token", "openclaw models auth paste-token --provider openai", "openclaw models auth paste-token --provider anthropic"]),
+            ("配置", ["openclaw config list", "openclaw config edit", "openclaw onboard"]),
+            ("聊天", ["/new", "/stop", "/compact", "/status", "/tts on", "/tts off"]),
+            ("插件", ["openclaw plugins list", "openclaw skills list", "openclaw logs", "openclaw --version"]),
+        ]
+        for tab_name, cmds in CMD_GROUPS:
+            tab = cmd_tab.add(tab_name)
+            for cmd in cmds:
+                row = ctk.CTkFrame(tab, fg_color="transparent")
+                row.pack(fill="x", pady=1)
+                lbl = ctk.CTkLabel(row, text=cmd, font=ctk.CTkFont(size=11, family="Courier"),
+                                   text_color="#adf", anchor="w", cursor="hand2")
+                lbl.pack(side="left", fill="x", expand=True)
+                lbl.bind("<Button-1>", lambda e, c=cmd: (self.clipboard_clear(), self.clipboard_append(c),
+                         self._set_status(f"已复制：{c}", "#4aff88")))
+
         # 配置导入/导出按钮区
         cfg_frame = ctk.CTkFrame(self, fg_color="transparent")
         cfg_frame.pack(pady=(2, 6))
@@ -667,16 +688,18 @@ class OnePersonClaw(ctk.CTk):
                     return
             self._log(f"   Node.js {node_check.stdout.strip()} ✓")
 
-            # 3. 升级 Node.js 到最新版（通过 npm 全局安装 n 或 fnm，Windows 用 winget）
+            # 3. 升级 Node.js 到最新版（通过 npm 安装 n，Windows 用 npm-windows-upgrade）
             self._log("[3/4] 升级 Node.js 到最新 LTS...")
             upgrade = subprocess.run(
-                "winget upgrade --id OpenJS.NodeJS.LTS --silent --accept-package-agreements --accept-source-agreements",
+                "npm install -g npm-windows-upgrade && npm-windows-upgrade --npm-version latest --node-version lts --no-prompt",
                 shell=True, capture_output=True, text=True, timeout=300
             )
+            if upgrade.stdout:
+                self._log(upgrade.stdout.strip())
             if upgrade.returncode == 0:
                 self._log("   Node.js 已升级到最新 LTS ✓")
             else:
-                self._log("   升级跳过（已是最新版或 winget 不可用）")
+                self._log("   升级跳过（已是最新版或暂不支持自动升级）")
 
             # 4. 安装 openclaw
             self._log("[4/4] 正在安装 openclaw（npm install -g openclaw）...")
@@ -827,7 +850,7 @@ class OnePersonClaw(ctk.CTk):
             return
         try:
             result = subprocess.run(
-                [openclaw_cmd, "agent", "--message", msg, "--json"],
+                [openclaw_cmd, "agent", "--agent", "main", "--local", "--message", msg, "--json"],
                 capture_output=True, text=True, timeout=60
             )
             output = result.stdout.strip()
