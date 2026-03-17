@@ -455,6 +455,8 @@ class OnePersonClaw(ctk.CTk):
         self._update_prompt_preview()
 
     def _update_prompt_preview(self):
+        if not hasattr(self, 'prompt_box'):
+            return
         scene = SCENES.get(self.scene_var.get(), {})
         prompt = scene.get("prompt", "")
         preview = prompt[:120] + "..." if len(prompt) > 120 else prompt
@@ -573,14 +575,29 @@ class OnePersonClaw(ctk.CTk):
 
     def _run_install(self):
         try:
-            self._log("检查 Node.js...")
+            # 1. 检查 Git
+            self._log("[1/3] 检查 Git...")
+            git_check = subprocess.run(["git", "--version"], capture_output=True, text=True)
+            if git_check.returncode != 0:
+                self._log("❌ 未找到 Git")
+                self._log("   请下载安装 Git：https://git-scm.com/download/win")
+                self._log("   安装完成后重新点击【📦 安装】")
+                return
+            self._log(f"   {git_check.stdout.strip()} ✓")
+
+            # 2. 检查 Node.js
+            self._log("[2/3] 检查 Node.js...")
             node_check = subprocess.run(["node", "--version"], capture_output=True, text=True)
             if node_check.returncode != 0:
-                self._log("❌ 未找到 Node.js，请先安装 Node.js：https://nodejs.org")
+                self._log("❌ 未找到 Node.js")
+                self._log("   请下载安装 Node.js LTS：https://nodejs.org")
+                self._log("   安装完成后重新点击【📦 安装】")
                 return
-            self._log(f"Node.js {node_check.stdout.strip()} ✓")
+            self._log(f"   Node.js {node_check.stdout.strip()} ✓")
 
-            self._log("正在安装 openclaw（npm install -g openclaw）...")
+            # 3. 安装 openclaw
+            self._log("[3/3] 正在安装 openclaw（npm install -g openclaw）...")
+            self._log("   这可能需要1-3分钟，请耐心等待...")
             result = subprocess.run(
                 ["npm", "install", "-g", "openclaw"],
                 capture_output=True, text=True
