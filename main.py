@@ -11,7 +11,7 @@ import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 
 # ── 常量 ─────────────────────────────────────────────────────
-VERSION = "1.8.9"
+VERSION = "1.9.0"
 UPDATE_URL = "https://raw.githubusercontent.com/chatgpt-yunju/OnePersonClaw/main/version.json"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
@@ -643,7 +643,11 @@ class OnePersonClaw(ctk.CTk):
         effective_base_url = base_url or model_info.get("base_url", "")
 
         if using_free:
-            self._log("⚡ 未填 API Key，已自动使用免费共享 DeepSeek（限速 60次/分钟）")
+            self._log("="*50)
+            self._log("⚡ 未填 API Key，已自动使用免费共享 DeepSeek")
+            self._log("   限速：60次/分钟（所有用户共享）")
+            self._log("   如需更快速度，请配置自己的 API Key")
+            self._log("="*50)
 
         env = os.environ.copy()
         env["API_KEY"] = api_key
@@ -824,7 +828,16 @@ class OnePersonClaw(ctk.CTk):
             if result.stdout:
                 self._log(result.stdout)
             if result.returncode == 0:
-                self._log("✅ openclaw 安装成功！点击【🚀 一键启动】即可运行。")
+                self._log("="*50)
+                self._log("✅ openclaw 安装成功！")
+                self._log("")
+                self._log("💡 使用说明：")
+                self._log("   1. 如果有自己的 API Key，请在上方填写")
+                self._log("   2. 如果没有，直接点击【🚀 一键启动】")
+                self._log("      将自动使用免费共享 DeepSeek（限速 60次/分钟）")
+                self._log("")
+                self._log("👉 现在就可以点击【🚀 一键启动】开始使用！")
+                self._log("="*50)
             else:
                 self._log("❌ 安装失败：" + (result.stderr if result.stderr else "未知错误"))
         except Exception as e:

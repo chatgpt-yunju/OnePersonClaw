@@ -1,5 +1,5 @@
 {
-  "version": "1.8.9",
-  "notes": "优化 Node.js 安装：多镜像源、MSI 备选方案、3 次验证重试，参考 CC Club 安装脚本",
+  "version": "1.9.0",
+  "notes": "优化用户体验：安装完成后清晰提示可直接使用免费共享 DeepSeek，无需配置 API Key",
   "download_url": "https://github.com/chatgpt-yunju/OnePersonClaw/releases/latest"
 }
