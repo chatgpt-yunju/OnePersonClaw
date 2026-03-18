@@ -11,7 +11,7 @@ import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 
 # ── 常量 ─────────────────────────────────────────────────────
-VERSION = "0.5.0"
+VERSION = "0.5.1"
 UPDATE_URL = "https://raw.githubusercontent.com/chatgpt-yunju/OnePersonClaw/main/version.json"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
@@ -33,7 +33,7 @@ SIMPLE_MODELS = {
         "desc": "最强推理，积分制",
     },
 }
-SIMPLE_BASE_URL = "https://api.yunjunet.cn"
+SIMPLE_BASE_URL = "https://api.yunjunet.cn/v1"
 
 MODELS = {
     "Claude Sonnet (Anthropic)": {
