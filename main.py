@@ -320,13 +320,6 @@ class OnePersonClaw(ctk.CTk):
         )
         self.simple_connect_btn.pack(side="left", padx=(0, 8))
 
-        ctk.CTkButton(
-            btn_row, text="3 切换模型",
-            width=120, height=50,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color="#5a3a7a", hover_color="#3a1a5a",
-            command=self._simple_switch_model
-        ).pack(side="left")
 
         self.simple_status_label = ctk.CTkLabel(
             self.main_frame, text="● 未启动",
