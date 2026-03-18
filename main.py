@@ -503,20 +503,53 @@ class OnePersonClaw(ctk.CTk):
         entry.pack(padx=30)
 
         ctk.CTkLabel(
-            win, text="下次点击「1 一键启动」时生效",
+            win, text="无需重启网关，立即生效",
             font=ctk.CTkFont(size=11), text_color="#888"
         ).pack(anchor="w", padx=30, pady=(4, 0))
+
+        status_label = ctk.CTkLabel(win, text="", font=ctk.CTkFont(size=11), text_color="#888")
+        status_label.pack(pady=(4, 0))
 
         def _confirm():
             model_id = entry.get().strip() or "z-ai/glm5"
             self.simple_model_var.set(model_id)
             self.simple_model_menu.configure(values=[model_id])
             self.simple_model_menu.set(model_id)
+
+            # 通过 openclaw chat 发送 /model 命令实现无重启切换
+            openclaw_cmd = shutil.which("openclaw")
+            if not openclaw_cmd:
+                for c in [
+                    os.path.expanduser("~\\AppData\\Roaming\\npm\\openclaw.cmd"),
+                    os.path.expanduser("~\\AppData\\Roaming\\npm\\openclaw"),
+                ]:
+                    if os.path.exists(c):
+                        openclaw_cmd = c
+                        break
+
+            if openclaw_cmd:
+                status_label.configure(text="正在切换...", text_color="#888")
+                win.update()
+                def _do_switch():
+                    try:
+                        proc = subprocess.Popen(
+                            [openclaw_cmd, "chat"],
+                            stdin=subprocess.PIPE,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                        )
+                        proc.communicate(input=f"/model {model_id}\n/exit\n".encode(), timeout=10)
+                        self.after(0, lambda: self.simple_status_label.configure(
+                            text=f"● 运行中 | {model_id}", text_color="#50c0ff"))
+                    except Exception:
+                        pass
+                threading.Thread(target=_do_switch, daemon=True).start()
+
             win.destroy()
 
         ctk.CTkButton(win, text="确认", width=160, height=38,
                       font=ctk.CTkFont(size=14, weight="bold"),
-                      command=_confirm).pack(pady=(16, 0))
+                      command=_confirm).pack(pady=(12, 0))
 
     def _simple_stop(self):
         """停止服务：关闭gateway进程并关闭浏览器页面"""
