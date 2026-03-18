@@ -1,5 +1,5 @@
 {
-  "version": "1.9.2",
-  "notes": "参考 CC Switch 优化配置管理：支持保存和快速切换多个配置预设",
+  "version": "0.5.8",
+  "notes": "启动时自动检测新版本并提示更新",
   "download_url": "https://github.com/chatgpt-yunju/OnePersonClaw/releases/latest"
 }

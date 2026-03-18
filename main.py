@@ -11,7 +11,7 @@ import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 
 # ── 常量 ─────────────────────────────────────────────────────
-VERSION = "0.5.1"
+VERSION = "0.5.8"
 UPDATE_URL = "https://raw.githubusercontent.com/chatgpt-yunju/OnePersonClaw/main/version.json"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
@@ -1486,20 +1486,21 @@ class OnePersonClaw(ctk.CTk):
             latest = info.get("version", VERSION)
             notes = info.get("notes", "")
             if latest != VERSION:
-                self.update_btn.configure(
+                self.after(0, lambda: self.update_btn.configure(
                     text=f"v{VERSION} → {latest}",
                     fg_color="#7a3a00", hover_color="#a05000"
-                )
-                if manual:
+                ))
+                def _prompt():
                     if messagebox.askyesno(
                         "发现新版本",
                         f"最新版本：{latest}\n\n更新说明：{notes}\n\n是否前往下载？"
                     ):
-                        webbrowser.open("https://github.com/changyunju/OnePersonClaw/releases")
+                        webbrowser.open("https://github.com/chatgpt-yunju/OnePersonClaw/releases/latest")
+                self.after(0, _prompt)
             else:
-                self.update_btn.configure(text=f"v{VERSION} ✓", fg_color="#2a5a2a")
+                self.after(0, lambda: self.update_btn.configure(text=f"v{VERSION} ✓", fg_color="#2a5a2a"))
                 if manual:
-                    messagebox.showinfo("已是最新", f"当前版本 v{VERSION} 已是最新。")
+                    self.after(0, lambda: messagebox.showinfo("已是最新", f"当前版本 v{VERSION} 已是最新。"))
         except Exception:
             if manual:
                 messagebox.showwarning("检查失败", "无法连接更新服务器，请检查网络。")
