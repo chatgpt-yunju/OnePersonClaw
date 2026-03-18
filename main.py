@@ -287,20 +287,66 @@ class OnePersonClaw(ctk.CTk):
 
     def _build_simple_ui(self):
         """新版简化UI：模型选择 + 一键启动"""
-        # 直接设置已登录状态
         self.is_logged_in = True
         self.api_token = ""
         self.available_models = ["deepseek-chat", "glm-4-flash", "claude-sonnet-4-6"]
 
-        # 主界面区域（直接显示）
         self.main_frame = ctk.CTkFrame(self.simple_container)
         self.main_frame.pack(fill="both", expand=True, pady=20)
 
-        # 模型变量（隐藏 UI，通过"3 切换模型"修改）
         self.simple_model_var = ctk.StringVar(value=self.available_models[0])
 
-        btn_row = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        btn_row.pack(pady=(0, 20))
+        # 检测 openclaw 是否已安装
+        openclaw_cmd = shutil.which("openclaw")
+        if not openclaw_cmd:
+            for c in [
+                os.path.join(os.path.expanduser("~"), "AppData", "Roaming", "npm", "openclaw.cmd"),
+                os.path.join(os.path.expanduser("~"), "AppData", "Roaming", "npm", "openclaw"),
+            ]:
+                if os.path.exists(c):
+                    openclaw_cmd = c
+                    break
+
+        if not openclaw_cmd:
+            # 未安装：显示安装区域
+            self._build_install_ui(self.main_frame)
+        else:
+            # 已安装：显示操作按钮
+            self._build_action_ui(self.main_frame)
+
+    def _build_install_ui(self, parent):
+        """未安装 openclaw 时显示的安装引导"""
+        ctk.CTkLabel(
+            parent, text="⚠️ 未检测到 openclaw",
+            font=ctk.CTkFont(size=15, weight="bold"), text_color="#ffaa00"
+        ).pack(pady=(30, 6))
+
+        ctk.CTkLabel(
+            parent, text="需要先安装 openclaw 才能使用",
+            font=ctk.CTkFont(size=12), text_color="#888"
+        ).pack(pady=(0, 20))
+
+        ctk.CTkButton(
+            parent, text="🚀 一键安装 openclaw",
+            width=260, height=48,
+            font=ctk.CTkFont(size=15, weight="bold"),
+            fg_color="#7a4a00", hover_color="#a06000",
+            command=self._install_openclaw
+        ).pack()
+
+        self.install_log = ctk.CTkTextbox(parent, height=200, font=ctk.CTkFont(size=11, family="Courier"))
+        self.install_log.pack(fill="x", padx=30, pady=(16, 10))
+        self.install_log.configure(state="disabled")
+
+        self.simple_status_label = ctk.CTkLabel(
+            parent, text="", font=ctk.CTkFont(size=12), text_color="#888"
+        )
+        self.simple_status_label.pack(pady=(0, 10))
+
+    def _build_action_ui(self, parent):
+        """已安装 openclaw 时显示的操作按钮"""
+        btn_row = ctk.CTkFrame(parent, fg_color="transparent")
+        btn_row.pack(pady=(40, 20))
 
         self.simple_launch_btn = ctk.CTkButton(
             btn_row, text="1 一键启动",
@@ -320,12 +366,93 @@ class OnePersonClaw(ctk.CTk):
         )
         self.simple_connect_btn.pack(side="left", padx=(0, 8))
 
-
         self.simple_status_label = ctk.CTkLabel(
-            self.main_frame, text="● 未启动",
+            parent, text="● 未启动",
             font=ctk.CTkFont(size=13), text_color="#888"
         )
         self.simple_status_label.pack(pady=(5, 30))
+
+    def _install_openclaw(self):
+        """可视化安装 openclaw：Node.js → npm 镜像 → openclaw"""
+        STEPS = [
+            ("[1/3] 检查 Node.js...",          self._install_check_node),
+            ("[2/3] 配置 npm 镜像源...",        self._install_npm_mirror),
+            ("[3/3] 安装 openclaw...",          self._install_npm_openclaw),
+        ]
+
+        def _log(msg):
+            self.after(0, lambda: self._append_install_log(msg))
+
+        def _run():
+            for title, fn in STEPS:
+                _log(title)
+                ok, msg = fn(_log)
+                if not ok:
+                    _log(f"❌ {msg}\n")
+                    self.after(0, lambda: self.simple_status_label.configure(
+                        text="安装失败", text_color="#ff5555"))
+                    return
+            _log("\n✅ 安装完成！请重新启动 OnePersonClaw。\n")
+            self.after(0, lambda: self.simple_status_label.configure(
+                text="✅ 安装成功，请重启", text_color="#50c0ff"))
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    def _append_install_log(self, msg):
+        self.install_log.configure(state="normal")
+        self.install_log.insert("end", msg + "\n")
+        self.install_log.see("end")
+        self.install_log.configure(state="disabled")
+
+    def _install_check_node(self, log):
+        import shutil as sh
+        if sh.which("node"):
+            result = subprocess.run(["node", "--version"], capture_output=True, text=True)
+            log(f"   Node.js {result.stdout.strip()} ✓")
+            return True, ""
+        # 尝试 winget 安装
+        log("   未找到 Node.js，尝试用 winget 安装...")
+        if sh.which("winget"):
+            r = subprocess.run(
+                ["winget", "install", "--id", "OpenJS.NodeJS.LTS",
+                 "--accept-source-agreements", "--accept-package-agreements", "-h"],
+                capture_output=True, text=True
+            )
+            if r.returncode == 0:
+                log("   Node.js 安装成功 ✓")
+                return True, ""
+        log("   winget 不可用，请手动安装 Node.js: https://nodejs.org")
+        return False, "Node.js 安装失败，请手动安装后重试"
+
+    def _install_npm_mirror(self, log):
+        try:
+            subprocess.run(
+                ["npm", "config", "set", "registry", "https://registry.npmmirror.com"],
+                capture_output=True, check=True
+            )
+            log("   淘宝镜像源配置完成 ✓")
+            return True, ""
+        except Exception as e:
+            return False, str(e)
+
+    def _install_npm_openclaw(self, log):
+        try:
+            proc = subprocess.Popen(
+                ["npm", "install", "-g", "openclaw"],
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            for line in proc.stdout:
+                line = line.rstrip()
+                if line:
+                    log(f"   {line}")
+            proc.wait()
+            if proc.returncode == 0:
+                log("   openclaw 安装成功 ✓")
+                return True, ""
+            return False, f"npm 退出码 {proc.returncode}"
+        except Exception as e:
+            return False, str(e)
 
     def _do_login(self):
         """执行登录"""
