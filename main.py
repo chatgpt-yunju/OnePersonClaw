@@ -286,70 +286,24 @@ class OnePersonClaw(ctk.CTk):
             self.mode_switch_btn.configure(text="切换到新版")
 
     def _build_simple_ui(self):
-        """新版简化UI：登录 + 模型选择 + 一键启动"""
-        # 登录状态
-        self.is_logged_in = False
+        """新版简化UI：模型选择 + 一键启动"""
+        # 直接设置已登录状态
+        self.is_logged_in = True
         self.api_token = ""
-        self.available_models = []
+        self.available_models = ["deepseek-chat", "glm-4-flash", "claude-sonnet-4-6"]
 
-        # 登录区域
-        self.login_frame = ctk.CTkFrame(self.simple_container)
-        self.login_frame.pack(fill="both", expand=True, pady=20)
-
-        ctk.CTkLabel(
-            self.login_frame, text="🔐 登录 api.yunjunet.cn",
-            font=ctk.CTkFont(size=18, weight="bold")
-        ).pack(pady=(30, 20))
-
-        ctk.CTkLabel(
-            self.login_frame, text="用户名",
-            font=ctk.CTkFont(size=13)
-        ).pack(anchor="w", padx=80, pady=(10, 2))
-
-        self.username_entry = ctk.CTkEntry(
-            self.login_frame, width=300, height=35,
-            placeholder_text="请输入用户名",
-            font=ctk.CTkFont(size=13)
-        )
-        self.username_entry.pack(pady=(0, 15))
-
-        ctk.CTkLabel(
-            self.login_frame, text="密码",
-            font=ctk.CTkFont(size=13)
-        ).pack(anchor="w", padx=80, pady=(0, 2))
-
-        self.password_entry = ctk.CTkEntry(
-            self.login_frame, width=300, height=35,
-            placeholder_text="请输入密码", show="●",
-            font=ctk.CTkFont(size=13)
-        )
-        self.password_entry.pack(pady=(0, 20))
-
-        self.login_btn = ctk.CTkButton(
-            self.login_frame, text="登录",
-            width=300, height=40,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            command=self._do_login
-        )
-        self.login_btn.pack(pady=(0, 10))
-
-        self.login_status_label = ctk.CTkLabel(
-            self.login_frame, text="",
-            font=ctk.CTkFont(size=12), text_color="#888"
-        )
-        self.login_status_label.pack(pady=(5, 20))
-
-        # 主界面区域（登录后显示）
+        # 主界面区域（直接显示）
         self.main_frame = ctk.CTkFrame(self.simple_container)
+        self.main_frame.pack(fill="both", expand=True, pady=20)
 
         ctk.CTkLabel(
             self.main_frame, text="选择模型",
             font=ctk.CTkFont(size=14, weight="bold")
         ).pack(anchor="w", padx=80, pady=(30, 5))
 
-        self.simple_model_var = ctk.StringVar(value="")
+        self.simple_model_var = ctk.StringVar(value=self.available_models[0])
         self.simple_model_menu = ctk.CTkOptionMenu(
-            self.main_frame, values=["请先登录"],
+            self.main_frame, values=self.available_models,
             variable=self.simple_model_var,
             width=300, height=35,
             font=ctk.CTkFont(size=13)
