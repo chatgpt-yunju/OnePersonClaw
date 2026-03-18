@@ -476,51 +476,79 @@ class OnePersonClaw(ctk.CTk):
         webbrowser.open(url)
 
     def _simple_switch_model(self):
-        """临时切换模型（仅改内存，不修改配置文件）"""
+        """临时切换模型（通过 openclaw chat /model 命令，不修改配置文件）"""
+        PRESET_MODELS = [
+            ("MiniMax M2.5",           "minimaxai/minimax-m2.5"),
+            ("Codestral 22B",          "mistralai/codestral-22b-instruct-v0.1"),
+            ("恢复默认",                "default"),
+        ]
+
         win = ctk.CTkToplevel(self)
         win.title("3 切换模型（临时）")
-        win.geometry("400x180")
+        win.geometry("420x320")
         win.grab_set()
 
-        ctk.CTkLabel(
-            win, text="模型 ID（临时生效，重启后恢复）",
-            font=ctk.CTkFont(size=13)
-        ).pack(anchor="w", padx=30, pady=(20, 4))
+        ctk.CTkLabel(win, text="快速切换（临时，不修改配置）",
+                     font=ctk.CTkFont(size=13, weight="bold")).pack(pady=(18, 8))
 
-        entry = ctk.CTkEntry(win, width=340, placeholder_text="z-ai/glm5")
-        entry.insert(0, self.simple_model_var.get() or "z-ai/glm5")
+        # 预设模型按钮
+        for label, mid in PRESET_MODELS:
+            def _make_cb(m=mid):
+                return lambda: _apply(m)
+            ctk.CTkButton(
+                win, text=f"{label}   {mid}",
+                width=360, height=34, anchor="w",
+                fg_color="#2a2a2a", hover_color="#3a3a3a",
+                font=ctk.CTkFont(size=12),
+                command=_make_cb()
+            ).pack(padx=30, pady=3)
+
+        ctk.CTkLabel(win, text="自定义模型 ID",
+                     font=ctk.CTkFont(size=12), text_color="#888").pack(anchor="w", padx=30, pady=(12, 2))
+
+        entry = ctk.CTkEntry(win, width=360, placeholder_text="provider/model-id")
         entry.pack(padx=30)
 
-        ctk.CTkLabel(
-            win, text="无需重启网关，立即生效",
-            font=ctk.CTkFont(size=11), text_color="#888"
-        ).pack(anchor="w", padx=30, pady=(4, 0))
+        ctk.CTkButton(win, text="确认自定义", width=160, height=36,
+                      font=ctk.CTkFont(size=13, weight="bold"),
+                      command=lambda: _apply(entry.get().strip())).pack(pady=(12, 0))
 
-        def _confirm():
-            model_id = entry.get().strip() or "z-ai/glm5"
-            # 静默修改 openclaw.json 中的模型 ID
-            config_path = os.path.join(os.path.expanduser("~"), ".openclaw", "openclaw.json")
-            try:
-                with open(config_path, encoding="utf-8") as f:
-                    cfg = json.load(f)
-                provider = cfg.setdefault("providers", {}).setdefault("custom-api-yunjunet-cn", {})
-                models = provider.get("models", [])
-                if models:
-                    models[0]["id"] = model_id
-                    models[0]["name"] = model_id
-                else:
-                    provider["models"] = [{"id": model_id, "name": model_id}]
-                with open(config_path, "w", encoding="utf-8") as f:
-                    json.dump(cfg, f, ensure_ascii=False, indent=2)
-            except Exception:
-                pass
-            self.simple_model_var.set(model_id)
-            self.simple_status_label.configure(text=f"● 模型已切换 | {model_id}", text_color="#50c0ff")
-            win.destroy()
+        status = ctk.CTkLabel(win, text="", font=ctk.CTkFont(size=11), text_color="#888")
+        status.pack(pady=(6, 0))
 
-        ctk.CTkButton(win, text="确认", width=160, height=38,
-                      font=ctk.CTkFont(size=14, weight="bold"),
-                      command=_confirm).pack(pady=(16, 0))
+        def _apply(model_id):
+            if not model_id:
+                return
+            status.configure(text="切换中...", text_color="#888")
+            win.update()
+
+            def _run():
+                openclaw_cmd = shutil.which("openclaw")
+                if not openclaw_cmd:
+                    for c in [
+                        os.path.join(os.path.expanduser("~"), "AppData", "Roaming", "npm", "openclaw.cmd"),
+                        os.path.join(os.path.expanduser("~"), "AppData", "Roaming", "npm", "openclaw"),
+                    ]:
+                        if os.path.exists(c):
+                            openclaw_cmd = c
+                            break
+                if openclaw_cmd:
+                    try:
+                        subprocess.Popen(
+                            [openclaw_cmd, "chat"],
+                            stdin=subprocess.PIPE,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                            creationflags=subprocess.CREATE_NO_WINDOW,
+                        ).communicate(input=f"/model {model_id}\n/exit\n".encode(), timeout=10)
+                    except Exception:
+                        pass
+                self.simple_model_var.set(model_id)
+                self.after(0, lambda: self.simple_status_label.configure(
+                    text=f"● 模型已切换 | {model_id}", text_color="#50c0ff"))
+                self.after(0, win.destroy)
+
+            threading.Thread(target=_run, daemon=True).start()
 
     def _simple_stop(self):
         """停止服务：关闭gateway进程并关闭浏览器页面"""
