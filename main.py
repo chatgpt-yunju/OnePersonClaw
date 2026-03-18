@@ -296,19 +296,8 @@ class OnePersonClaw(ctk.CTk):
         self.main_frame = ctk.CTkFrame(self.simple_container)
         self.main_frame.pack(fill="both", expand=True, pady=20)
 
-        ctk.CTkLabel(
-            self.main_frame, text="选择模型",
-            font=ctk.CTkFont(size=14, weight="bold")
-        ).pack(anchor="w", padx=80, pady=(30, 5))
-
+        # 模型变量（隐藏 UI，通过"3 切换模型"修改）
         self.simple_model_var = ctk.StringVar(value=self.available_models[0])
-        self.simple_model_menu = ctk.CTkOptionMenu(
-            self.main_frame, values=self.available_models,
-            variable=self.simple_model_var,
-            width=300, height=35,
-            font=ctk.CTkFont(size=13)
-        )
-        self.simple_model_menu.pack(padx=80, pady=(0, 30))
 
         btn_row = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         btn_row.pack(pady=(0, 20))
@@ -510,21 +499,22 @@ class OnePersonClaw(ctk.CTk):
         def _confirm():
             model_id = entry.get().strip() or "z-ai/glm5"
             # 静默修改 openclaw.json 中的模型 ID
-            config_path = os.path.expanduser("~\\.openclaw\\openclaw.json")
+            config_path = os.path.join(os.path.expanduser("~"), ".openclaw", "openclaw.json")
             try:
                 with open(config_path, encoding="utf-8") as f:
                     cfg = json.load(f)
                 provider = cfg.setdefault("providers", {}).setdefault("custom-api-yunjunet-cn", {})
-                models = provider.setdefault("models", [{}])
-                models[0]["id"] = model_id
-                models[0]["name"] = model_id
+                models = provider.get("models", [])
+                if models:
+                    models[0]["id"] = model_id
+                    models[0]["name"] = model_id
+                else:
+                    provider["models"] = [{"id": model_id, "name": model_id}]
                 with open(config_path, "w", encoding="utf-8") as f:
                     json.dump(cfg, f, ensure_ascii=False, indent=2)
             except Exception:
                 pass
             self.simple_model_var.set(model_id)
-            self.simple_model_menu.configure(values=[model_id])
-            self.simple_model_menu.set(model_id)
             self.simple_status_label.configure(text=f"● 模型已切换 | {model_id}", text_color="#50c0ff")
             win.destroy()
 
