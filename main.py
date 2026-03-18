@@ -307,32 +307,17 @@ class OnePersonClaw(ctk.CTk):
                     openclaw_cmd = c
                     break
 
-        # 始终显示操作按钮和安装区域
         self._build_action_ui(self.main_frame)
-        self._build_install_ui(self.main_frame)
-
-    def _build_install_ui(self, parent):
-        """安装 openclaw 引导区域（始终显示）"""
-        ctk.CTkButton(
-            parent, text="🚀 一键安装 / 更新 openclaw",
-            width=260, height=48,
-            font=ctk.CTkFont(size=15, weight="bold"),
-            fg_color="#7a4a00", hover_color="#a06000",
-            command=self._install_openclaw
-        ).pack()
-
-        self.install_log = ctk.CTkTextbox(parent, height=160, font=ctk.CTkFont(size=11, family="Courier"))
-        self.install_log.pack(fill="x", padx=30, pady=(16, 10))
-        self.install_log.configure(state="disabled")
 
     def _build_action_ui(self, parent):
-        """已安装 openclaw 时显示的操作按钮"""
+        """操作按钮区域"""
+        # 主操作按钮行
         btn_row = ctk.CTkFrame(parent, fg_color="transparent")
-        btn_row.pack(pady=(40, 20))
+        btn_row.pack(pady=(30, 10))
 
         self.simple_launch_btn = ctk.CTkButton(
             btn_row, text="1 一键启动",
-            width=150, height=50,
+            width=150, height=46,
             font=ctk.CTkFont(size=15, weight="bold"),
             fg_color="#2a7d3f", hover_color="#1a5a1a",
             command=self._simple_launch
@@ -341,18 +326,51 @@ class OnePersonClaw(ctk.CTk):
 
         self.simple_connect_btn = ctk.CTkButton(
             btn_row, text="2 控制面板",
-            width=120, height=50,
+            width=120, height=46,
             font=ctk.CTkFont(size=14, weight="bold"),
             fg_color="#1a4a7a", hover_color="#0d2d4a",
             command=self._simple_connect
         )
-        self.simple_connect_btn.pack(side="left", padx=(0, 8))
+        self.simple_connect_btn.pack(side="left")
 
         self.simple_status_label = ctk.CTkLabel(
             parent, text="● 未启动",
-            font=ctk.CTkFont(size=13), text_color="#888"
+            font=ctk.CTkFont(size=12), text_color="#888"
         )
-        self.simple_status_label.pack(pady=(5, 30))
+        self.simple_status_label.pack(pady=(4, 10))
+
+        # 常用命令分隔线
+        ctk.CTkLabel(parent, text="常用命令", font=ctk.CTkFont(size=12, weight="bold"),
+                     text_color="#666").pack(pady=(8, 4))
+
+        # 常用命令按钮网格
+        CMDS = [
+            ("安装/更新",      "#7a4a00", "#a06000",  self._install_openclaw),
+            ("停止网关",       "#555",    "#333",      self._simple_stop),
+            ("检查健康",       "#2a4a6a", "#1a2a4a",  lambda: self._run_cmd_window("openclaw health")),
+            ("查看日志",       "#2a4a6a", "#1a2a4a",  lambda: self._run_cmd_window("openclaw logs")),
+            ("配置向导",       "#4a2a6a", "#2a1a4a",  lambda: self._run_cmd_window("openclaw configure")),
+            ("onboard",        "#4a2a6a", "#2a1a4a",  lambda: self._run_cmd_window("openclaw onboard")),
+            ("doctor",         "#2a4a2a", "#1a2a1a",  lambda: self._run_cmd_window("openclaw doctor")),
+            ("channels",       "#2a4a2a", "#1a2a1a",  lambda: self._run_cmd_window("openclaw channels login")),
+            ("查看模型",       "#3a3a3a", "#222",      lambda: self._run_cmd_window("openclaw models")),
+            ("update",         "#3a3a3a", "#222",      lambda: self._run_cmd_window("openclaw update")),
+        ]
+
+        grid = ctk.CTkFrame(parent, fg_color="transparent")
+        grid.pack(fill="x", padx=20, pady=(0, 10))
+        for i, (label, fg, hov, cmd) in enumerate(CMDS):
+            ctk.CTkButton(
+                grid, text=label, width=120, height=32,
+                font=ctk.CTkFont(size=12),
+                fg_color=fg, hover_color=hov,
+                command=cmd
+            ).grid(row=i // 5, column=i % 5, padx=4, pady=4)
+
+        # 日志框（供安装和命令输出使用）
+        self.install_log = ctk.CTkTextbox(parent, height=140, font=ctk.CTkFont(size=11, family="Courier"))
+        self.install_log.pack(fill="x", padx=20, pady=(4, 10))
+        self.install_log.configure(state="disabled")
 
     def _install_openclaw(self):
         """可视化安装 openclaw"""
@@ -425,6 +443,31 @@ class OnePersonClaw(ctk.CTk):
         self.install_log.insert("end", msg + "\n")
         self.install_log.see("end")
         self.install_log.configure(state="disabled")
+
+    def _run_cmd_window(self, cmd):
+        """在日志框中执行 openclaw 命令并显示输出"""
+        def _log(msg):
+            self.after(0, lambda m=msg: self._append_install_log(m))
+
+        def _run():
+            try:
+                _log(f"\n▶ {cmd}\n")
+                proc = subprocess.Popen(
+                    cmd, shell=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    text=True, encoding="utf-8", errors="replace",
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                )
+                for line in proc.stdout:
+                    line = line.rstrip()
+                    if line:
+                        _log(line)
+                proc.wait()
+                _log(f"\n── 完成 (exit {proc.returncode}) ──\n")
+            except Exception as e:
+                _log(f"❌ {e}")
+
+        threading.Thread(target=_run, daemon=True).start()
 
     def _do_login(self):
         """执行登录"""
