@@ -314,22 +314,30 @@ class OnePersonClaw(ctk.CTk):
         btn_row.pack(pady=(0, 20))
 
         self.simple_launch_btn = ctk.CTkButton(
-            btn_row, text="🚀 一键启动",
-            width=200, height=50,
-            font=ctk.CTkFont(size=16, weight="bold"),
+            btn_row, text="1 一键启动",
+            width=150, height=50,
+            font=ctk.CTkFont(size=15, weight="bold"),
             fg_color="#2a7d3f", hover_color="#1a5a1a",
             command=self._simple_launch
         )
-        self.simple_launch_btn.pack(side="left", padx=(0, 10))
+        self.simple_launch_btn.pack(side="left", padx=(0, 8))
 
         self.simple_connect_btn = ctk.CTkButton(
-            btn_row, text="🔗 连接",
-            width=100, height=50,
+            btn_row, text="2 控制面板",
+            width=120, height=50,
             font=ctk.CTkFont(size=14, weight="bold"),
             fg_color="#1a4a7a", hover_color="#0d2d4a",
             command=self._simple_connect
         )
-        self.simple_connect_btn.pack(side="left")
+        self.simple_connect_btn.pack(side="left", padx=(0, 8))
+
+        ctk.CTkButton(
+            btn_row, text="3 切换模型",
+            width=120, height=50,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color="#5a3a7a", hover_color="#3a1a5a",
+            command=self._simple_switch_model
+        ).pack(side="left")
 
         self.simple_status_label = ctk.CTkLabel(
             self.main_frame, text="● 未启动",
@@ -450,15 +458,8 @@ class OnePersonClaw(ctk.CTk):
         env["MODEL"] = model_id
 
         try:
-            # 先启动 gateway，再启动 dashboard
-            subprocess.Popen(
-                [openclaw_cmd, "gateway", "start"],
-                env=env,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
             self.process = subprocess.Popen(
-                [openclaw_cmd, "dashboard"],
+                [openclaw_cmd, "gateway", "start"],
                 env=env,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
@@ -484,6 +485,26 @@ class OnePersonClaw(ctk.CTk):
         except Exception:
             url = "http://127.0.0.1:18789"
         webbrowser.open(url)
+
+    def _simple_switch_model(self):
+        """弹出模型切换对话框"""
+        win = ctk.CTkToplevel(self)
+        win.title("切换模型")
+        win.geometry("320x200")
+        win.grab_set()
+
+        ctk.CTkLabel(win, text="选择模型", font=ctk.CTkFont(size=14, weight="bold")).pack(pady=(20, 10))
+
+        var = ctk.StringVar(value=self.simple_model_var.get())
+        menu = ctk.CTkOptionMenu(win, values=self.available_models, variable=var, width=260)
+        menu.pack(pady=(0, 20))
+
+        def _confirm():
+            self.simple_model_var.set(var.get())
+            self.simple_model_menu.set(var.get())
+            win.destroy()
+
+        ctk.CTkButton(win, text="确认", width=120, command=_confirm).pack()
 
     def _simple_stop(self):
         """停止服务：关闭gateway进程并关闭浏览器页面"""
