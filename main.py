@@ -450,12 +450,18 @@ class OnePersonClaw(ctk.CTk):
         env["MODEL"] = model_id
 
         try:
+            # 先启动 gateway，再启动 dashboard
+            subprocess.Popen(
+                [openclaw_cmd, "gateway", "start"],
+                env=env,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
             self.process = subprocess.Popen(
                 [openclaw_cmd, "dashboard"],
                 env=env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
             )
             self.simple_status_label.configure(text=f"● 运行中 | {model_id}", text_color="#50c0ff")
         except Exception as e:
@@ -463,7 +469,24 @@ class OnePersonClaw(ctk.CTk):
 
     def _simple_stop(self):
         """停止服务：关闭gateway进程并关闭浏览器页面"""
-        # 关闭 gateway 进程（包含子进程）
+        # 执行 openclaw gateway stop
+        openclaw_cmd = shutil.which("openclaw")
+        if not openclaw_cmd:
+            candidates = [
+                os.path.expanduser("~\\AppData\\Roaming\\npm\\openclaw.cmd"),
+                os.path.expanduser("~\\AppData\\Roaming\\npm\\openclaw"),
+            ]
+            for c in candidates:
+                if os.path.exists(c):
+                    openclaw_cmd = c
+                    break
+        if openclaw_cmd:
+            try:
+                subprocess.run([openclaw_cmd, "gateway", "stop"], capture_output=True)
+            except Exception:
+                pass
+
+        # 关闭 dashboard 进程
         if self.process:
             try:
                 subprocess.run(
@@ -473,16 +496,6 @@ class OnePersonClaw(ctk.CTk):
             except Exception:
                 pass
             self.process = None
-
-        # 关闭监听 18789 端口的进程
-        try:
-            result = subprocess.run(["netstat", "-ano"], capture_output=True, text=True)
-            for line in result.stdout.splitlines():
-                if ":18789" in line and "LISTENING" in line:
-                    pid = line.strip().split()[-1]
-                    subprocess.run(["taskkill", "/F", "/PID", pid], capture_output=True)
-        except Exception:
-            pass
 
         # 关闭浏览器中 127.0.0.1:18789 的页面（IE/Edge/Chrome Shell）
         try:
