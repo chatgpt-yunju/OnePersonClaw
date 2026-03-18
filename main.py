@@ -307,41 +307,23 @@ class OnePersonClaw(ctk.CTk):
                     openclaw_cmd = c
                     break
 
-        if not openclaw_cmd:
-            # 未安装：显示安装区域
-            self._build_install_ui(self.main_frame)
-        else:
-            # 已安装：显示操作按钮
-            self._build_action_ui(self.main_frame)
+        # 始终显示操作按钮和安装区域
+        self._build_action_ui(self.main_frame)
+        self._build_install_ui(self.main_frame)
 
     def _build_install_ui(self, parent):
-        """未安装 openclaw 时显示的安装引导"""
-        ctk.CTkLabel(
-            parent, text="⚠️ 未检测到 openclaw",
-            font=ctk.CTkFont(size=15, weight="bold"), text_color="#ffaa00"
-        ).pack(pady=(30, 6))
-
-        ctk.CTkLabel(
-            parent, text="需要先安装 openclaw 才能使用",
-            font=ctk.CTkFont(size=12), text_color="#888"
-        ).pack(pady=(0, 20))
-
+        """安装 openclaw 引导区域（始终显示）"""
         ctk.CTkButton(
-            parent, text="🚀 一键安装 openclaw",
+            parent, text="🚀 一键安装 / 更新 openclaw",
             width=260, height=48,
             font=ctk.CTkFont(size=15, weight="bold"),
             fg_color="#7a4a00", hover_color="#a06000",
             command=self._install_openclaw
         ).pack()
 
-        self.install_log = ctk.CTkTextbox(parent, height=200, font=ctk.CTkFont(size=11, family="Courier"))
+        self.install_log = ctk.CTkTextbox(parent, height=160, font=ctk.CTkFont(size=11, family="Courier"))
         self.install_log.pack(fill="x", padx=30, pady=(16, 10))
         self.install_log.configure(state="disabled")
-
-        self.simple_status_label = ctk.CTkLabel(
-            parent, text="", font=ctk.CTkFont(size=12), text_color="#888"
-        )
-        self.simple_status_label.pack(pady=(0, 10))
 
     def _build_action_ui(self, parent):
         """已安装 openclaw 时显示的操作按钮"""
