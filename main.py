@@ -310,14 +310,26 @@ class OnePersonClaw(ctk.CTk):
         )
         self.simple_model_menu.pack(padx=80, pady=(0, 30))
 
+        btn_row = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        btn_row.pack(pady=(0, 20))
+
         self.simple_launch_btn = ctk.CTkButton(
-            self.main_frame, text="🚀 一键启动",
-            width=300, height=50,
+            btn_row, text="🚀 一键启动",
+            width=200, height=50,
             font=ctk.CTkFont(size=16, weight="bold"),
             fg_color="#2a7d3f", hover_color="#1a5a1a",
             command=self._simple_launch
         )
-        self.simple_launch_btn.pack(pady=(0, 20))
+        self.simple_launch_btn.pack(side="left", padx=(0, 10))
+
+        self.simple_stop_btn = ctk.CTkButton(
+            btn_row, text="⏹ 停止",
+            width=100, height=50,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color="#555", hover_color="#333",
+            command=self._simple_stop
+        )
+        self.simple_stop_btn.pack(side="left")
 
         self.simple_status_label = ctk.CTkLabel(
             self.main_frame, text="● 未启动",
@@ -446,21 +458,47 @@ class OnePersonClaw(ctk.CTk):
                 text=True
             )
             self.simple_status_label.configure(text=f"● 运行中 | {model_id}", text_color="#50c0ff")
-            self.simple_launch_btn.configure(text="⏹ 停止", fg_color="#8b0000", command=self._simple_stop)
         except Exception as e:
             messagebox.showerror("启动失败", str(e))
 
     def _simple_stop(self):
-        """停止服务"""
+        """停止服务：关闭gateway进程并关闭浏览器页面"""
+        # 关闭 gateway 进程（包含子进程）
         if self.process:
-            self.process.terminate()
+            try:
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(self.process.pid)],
+                    capture_output=True
+                )
+            except Exception:
+                pass
             self.process = None
-            self.simple_status_label.configure(text="● 已停止", text_color="#888")
-            self.simple_launch_btn.configure(
-                text="🚀 一键启动",
-                fg_color="#2a7d3f", hover_color="#1a5a1a",
-                command=self._simple_launch
+
+        # 关闭监听 18789 端口的进程
+        try:
+            result = subprocess.run(["netstat", "-ano"], capture_output=True, text=True)
+            for line in result.stdout.splitlines():
+                if ":18789" in line and "LISTENING" in line:
+                    pid = line.strip().split()[-1]
+                    subprocess.run(["taskkill", "/F", "/PID", pid], capture_output=True)
+        except Exception:
+            pass
+
+        # 关闭浏览器中 127.0.0.1:18789 的页面（IE/Edge/Chrome Shell）
+        try:
+            ps_script = (
+                "$shell = New-Object -ComObject Shell.Application; "
+                "$shell.Windows() | Where-Object { $_.LocationURL -like '*18789*' } "
+                "| ForEach-Object { $_.Quit() }"
             )
+            subprocess.Popen(
+                ["powershell", "-NoProfile", "-Command", ps_script],
+                capture_output=True
+            )
+        except Exception:
+            pass
+
+        self.simple_status_label.configure(text="● 已停止", text_color="#888")
 
     def _build_advanced_ui(self):
         """旧版完整UI"""
