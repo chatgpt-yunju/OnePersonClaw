@@ -487,69 +487,36 @@ class OnePersonClaw(ctk.CTk):
         webbrowser.open(url)
 
     def _simple_switch_model(self):
-        """弹出模型切换对话框：填写模型ID和秘钥"""
-        # 读取当前配置
-        config_path = os.path.expanduser("~\\.openclaw\\openclaw.json")
-        current_model = "z-ai/glm5"
-        current_key = ""
-        try:
-            with open(config_path, encoding="utf-8") as f:
-                cfg = json.load(f)
-            provider = cfg.get("providers", {}).get("custom-api-yunjunet-cn", {})
-            models = provider.get("models", [])
-            if models:
-                current_model = models[0].get("id", current_model)
-            current_key = provider.get("apiKey", "")
-        except Exception:
-            pass
-
+        """临时切换模型（仅改内存，不修改配置文件）"""
         win = ctk.CTkToplevel(self)
-        win.title("3 切换模型")
-        win.geometry("400x300")
+        win.title("3 切换模型（临时）")
+        win.geometry("400x180")
         win.grab_set()
 
-        ctk.CTkLabel(win, text="模型 ID", font=ctk.CTkFont(size=13)).pack(anchor="w", padx=30, pady=(20, 2))
-        model_entry = ctk.CTkEntry(win, width=340, placeholder_text="z-ai/glm5")
-        model_entry.insert(0, current_model)
-        model_entry.pack(padx=30)
+        ctk.CTkLabel(
+            win, text="模型 ID（临时生效，重启后恢复）",
+            font=ctk.CTkFont(size=13)
+        ).pack(anchor="w", padx=30, pady=(20, 4))
 
-        ctk.CTkLabel(win, text="秘钥（从 api.yunjunet.cn 申请）", font=ctk.CTkFont(size=13)).pack(anchor="w", padx=30, pady=(15, 2))
-        key_entry = ctk.CTkEntry(win, width=340, placeholder_text="sk-...")
-        key_entry.insert(0, current_key)
-        key_entry.pack(padx=30)
+        entry = ctk.CTkEntry(win, width=340, placeholder_text="z-ai/glm5")
+        entry.insert(0, self.simple_model_var.get() or "z-ai/glm5")
+        entry.pack(padx=30)
 
-        ctk.CTkButton(
-            win, text="申请秘钥", width=120, height=28,
-            fg_color="#333", hover_color="#555",
-            font=ctk.CTkFont(size=12),
-            command=lambda: webbrowser.open("https://api.yunjunet.cn")
-        ).pack(anchor="e", padx=30, pady=(6, 0))
+        ctk.CTkLabel(
+            win, text="下次点击「1 一键启动」时生效",
+            font=ctk.CTkFont(size=11), text_color="#888"
+        ).pack(anchor="w", padx=30, pady=(4, 0))
 
         def _confirm():
-            model_id = model_entry.get().strip() or "z-ai/glm5"
-            api_key = key_entry.get().strip()
-            try:
-                with open(config_path, encoding="utf-8") as f:
-                    cfg = json.load(f)
-                if "providers" not in cfg:
-                    cfg["providers"] = {}
-                cfg["providers"]["custom-api-yunjunet-cn"] = {
-                    "baseUrl": "https://api.yunjunet.cn/v1",
-                    "apiKey": api_key,
-                    "api": "openai-completions",
-                    "models": [{"id": model_id, "name": model_id}]
-                }
-                with open(config_path, "w", encoding="utf-8") as f:
-                    json.dump(cfg, f, ensure_ascii=False, indent=2)
-                self.simple_model_var.set(model_id)
-                self.simple_model_menu.configure(values=[model_id])
-                win.destroy()
-            except Exception as e:
-                messagebox.showerror("保存失败", str(e))
+            model_id = entry.get().strip() or "z-ai/glm5"
+            self.simple_model_var.set(model_id)
+            self.simple_model_menu.configure(values=[model_id])
+            self.simple_model_menu.set(model_id)
+            win.destroy()
 
         ctk.CTkButton(win, text="确认", width=160, height=38,
                       font=ctk.CTkFont(size=14, weight="bold"),
-                      command=_confirm).pack(pady=(20, 0))
+                      command=_confirm).pack(pady=(16, 0))
 
     def _simple_stop(self):
         """停止服务：关闭gateway进程并关闭浏览器页面"""
