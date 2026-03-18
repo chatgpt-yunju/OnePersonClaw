@@ -322,14 +322,14 @@ class OnePersonClaw(ctk.CTk):
         )
         self.simple_launch_btn.pack(side="left", padx=(0, 10))
 
-        self.simple_stop_btn = ctk.CTkButton(
-            btn_row, text="⏹ 停止",
+        self.simple_connect_btn = ctk.CTkButton(
+            btn_row, text="🔗 连接",
             width=100, height=50,
             font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color="#555", hover_color="#333",
-            command=self._simple_stop
+            fg_color="#1a4a7a", hover_color="#0d2d4a",
+            command=self._simple_connect
         )
-        self.simple_stop_btn.pack(side="left")
+        self.simple_connect_btn.pack(side="left")
 
         self.simple_status_label = ctk.CTkLabel(
             self.main_frame, text="● 未启动",
@@ -466,6 +466,24 @@ class OnePersonClaw(ctk.CTk):
             self.simple_status_label.configure(text=f"● 运行中 | {model_id}", text_color="#50c0ff")
         except Exception as e:
             messagebox.showerror("启动失败", str(e))
+
+    def _simple_connect(self):
+        """读取 openclaw 配置，打开 gateway 连接页面"""
+        config_path = os.path.expanduser("~\\.openclaw\\openclaw.json")
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                cfg = json.load(f)
+            gw = cfg.get("gateway", {})
+            port = gw.get("port", 18789)
+            auth = gw.get("auth", {})
+            password = auth.get("password", "")
+            if password:
+                url = f"http://127.0.0.1:{port}?password={password}"
+            else:
+                url = f"http://127.0.0.1:{port}"
+        except Exception:
+            url = "http://127.0.0.1:18789"
+        webbrowser.open(url)
 
     def _simple_stop(self):
         """停止服务：关闭gateway进程并关闭浏览器页面"""
