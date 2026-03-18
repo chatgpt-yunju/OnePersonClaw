@@ -355,28 +355,68 @@ class OnePersonClaw(ctk.CTk):
         self.simple_status_label.pack(pady=(5, 30))
 
     def _install_openclaw(self):
-        """可视化安装 openclaw：Node.js → npm 镜像 → openclaw"""
-        STEPS = [
-            ("[1/3] 检查 Node.js...",          self._install_check_node),
-            ("[2/3] 配置 npm 镜像源...",        self._install_npm_mirror),
-            ("[3/3] 安装 openclaw...",          self._install_npm_openclaw),
-        ]
-
+        """可视化安装 openclaw"""
         def _log(msg):
-            self.after(0, lambda: self._append_install_log(msg))
+            self.after(0, lambda m=msg: self._append_install_log(m))
+
+        def _run_cmd(cmd, log):
+            """用 shell=True 执行命令，实时输出日志，返回 (returncode, output)"""
+            proc = subprocess.Popen(
+                cmd, shell=True,
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, encoding="utf-8", errors="replace",
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            out = []
+            for line in proc.stdout:
+                line = line.rstrip()
+                if line:
+                    log(f"   {line}")
+                    out.append(line)
+            proc.wait()
+            return proc.returncode, "\n".join(out)
 
         def _run():
-            for title, fn in STEPS:
-                _log(title)
-                ok, msg = fn(_log)
-                if not ok:
-                    _log(f"❌ {msg}\n")
+            try:
+                _log("▶ 开始安装...\n")
+
+                # 1. 检查 Node.js
+                _log("[1/3] 检查 Node.js...")
+                rc, out = _run_cmd("node --version", _log)
+                if rc != 0:
+                    _log("   未找到 Node.js，尝试 winget 安装...")
+                    rc2, _ = _run_cmd(
+                        "winget install --id OpenJS.NodeJS.LTS "
+                        "--accept-source-agreements --accept-package-agreements -h",
+                        _log
+                    )
+                    if rc2 != 0:
+                        _log("❌ Node.js 安装失败，请手动安装: https://nodejs.org\n")
+                        return
+                    _log("   Node.js 安装完成 ✓")
+                else:
+                    _log(f"   Node.js {out.strip()} ✓")
+
+                # 2. 配置 npm 镜像
+                _log("\n[2/3] 配置 npm 淘宝镜像源...")
+                _run_cmd("npm config set registry https://registry.npmmirror.com", _log)
+                _log("   镜像源配置完成 ✓")
+
+                # 3. 安装 openclaw
+                _log("\n[3/3] 安装 openclaw（可能需要1-3分钟）...")
+                rc3, _ = _run_cmd("npm install -g openclaw", _log)
+                if rc3 != 0:
+                    _log(f"❌ openclaw 安装失败（退出码 {rc3}）\n")
                     self.after(0, lambda: self.simple_status_label.configure(
-                        text="安装失败", text_color="#ff5555"))
+                        text="❌ 安装失败", text_color="#ff5555"))
                     return
-            _log("\n✅ 安装完成！请重新启动 OnePersonClaw。\n")
-            self.after(0, lambda: self.simple_status_label.configure(
-                text="✅ 安装成功，请重启", text_color="#50c0ff"))
+
+                _log("\n✅ 安装完成！请重新启动 OnePersonClaw。\n")
+                self.after(0, lambda: self.simple_status_label.configure(
+                    text="✅ 安装成功，请重启", text_color="#50c0ff"))
+
+            except Exception as e:
+                _log(f"\n❌ 异常: {e}\n")
 
         threading.Thread(target=_run, daemon=True).start()
 
@@ -385,56 +425,6 @@ class OnePersonClaw(ctk.CTk):
         self.install_log.insert("end", msg + "\n")
         self.install_log.see("end")
         self.install_log.configure(state="disabled")
-
-    def _install_check_node(self, log):
-        import shutil as sh
-        if sh.which("node"):
-            result = subprocess.run(["node", "--version"], capture_output=True, text=True)
-            log(f"   Node.js {result.stdout.strip()} ✓")
-            return True, ""
-        # 尝试 winget 安装
-        log("   未找到 Node.js，尝试用 winget 安装...")
-        if sh.which("winget"):
-            r = subprocess.run(
-                ["winget", "install", "--id", "OpenJS.NodeJS.LTS",
-                 "--accept-source-agreements", "--accept-package-agreements", "-h"],
-                capture_output=True, text=True
-            )
-            if r.returncode == 0:
-                log("   Node.js 安装成功 ✓")
-                return True, ""
-        log("   winget 不可用，请手动安装 Node.js: https://nodejs.org")
-        return False, "Node.js 安装失败，请手动安装后重试"
-
-    def _install_npm_mirror(self, log):
-        try:
-            subprocess.run(
-                ["npm", "config", "set", "registry", "https://registry.npmmirror.com"],
-                capture_output=True, check=True
-            )
-            log("   淘宝镜像源配置完成 ✓")
-            return True, ""
-        except Exception as e:
-            return False, str(e)
-
-    def _install_npm_openclaw(self, log):
-        try:
-            proc = subprocess.Popen(
-                ["npm", "install", "-g", "openclaw"],
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, creationflags=subprocess.CREATE_NO_WINDOW
-            )
-            for line in proc.stdout:
-                line = line.rstrip()
-                if line:
-                    log(f"   {line}")
-            proc.wait()
-            if proc.returncode == 0:
-                log("   openclaw 安装成功 ✓")
-                return True, ""
-            return False, f"npm 退出码 {proc.returncode}"
-        except Exception as e:
-            return False, str(e)
 
     def _do_login(self):
         """执行登录"""
