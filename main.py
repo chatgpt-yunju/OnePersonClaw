@@ -11,9 +11,29 @@ import tkinter.filedialog as filedialog
 import tkinter.messagebox as messagebox
 
 # ── 常量 ─────────────────────────────────────────────────────
-VERSION = "1.9.2"
+VERSION = "0.5.0"
 UPDATE_URL = "https://raw.githubusercontent.com/chatgpt-yunju/OnePersonClaw/main/version.json"
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+
+# 新版简化模型（Base URL 统一为 api.yunjunet.cn）
+SIMPLE_MODELS = {
+    "DeepSeek": {
+        "id": "deepseek-chat",
+        "provider": "openai",
+        "desc": "高性价比，推理能力强",
+    },
+    "智谱 GLM": {
+        "id": "glm-4-flash",
+        "provider": "openai",
+        "desc": "国产大模型，响应快",
+    },
+    "Claude Sonnet 4.6 (CC Club)": {
+        "id": "claude-sonnet-4-6",
+        "provider": "openai",
+        "desc": "最强推理，积分制",
+    },
+}
+SIMPLE_BASE_URL = "https://api.yunjunet.cn"
 
 MODELS = {
     "Claude Sonnet (Anthropic)": {
@@ -190,9 +210,13 @@ class OnePersonClaw(ctk.CTk):
         # 初始化属性
         self.current_key_url = ""
         self.process = None
+        self.is_simple_mode = True  # 默认使用新版简化模式
+
         # 每个模型独立存储 key 和 base_url
         self.models_config = {name: {"api_key": "", "base_url": m.get("base_url", "")}
                               for name, m in MODELS.items()}
+        self.simple_models_config = {name: {"api_key": ""} for name in SIMPLE_MODELS.keys()}
+
         self._build_ui()
         self._load_config()
         self._check_update_async()
@@ -208,6 +232,14 @@ class OnePersonClaw(ctk.CTk):
             header, text="🦞 OnePersonClaw",
             font=ctk.CTkFont(size=26, weight="bold")
         ).pack(side="left")
+
+        # 版本切换按钮
+        self.mode_switch_btn = ctk.CTkButton(
+            header, text="切换到旧版",
+            width=100, height=28, fg_color="#555", hover_color="#666",
+            font=ctk.CTkFont(size=12), command=self._toggle_mode
+        )
+        self.mode_switch_btn.pack(side="right", padx=(8, 0))
 
         self.update_btn = ctk.CTkButton(
             header, text=f"v{VERSION}",
@@ -226,16 +258,268 @@ class OnePersonClaw(ctk.CTk):
             font=ctk.CTkFont(size=13), text_color="#888"
         ).pack(pady=(2, 12))
 
+        # 创建两个UI容器
+        self.simple_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.advanced_container = ctk.CTkFrame(self, fg_color="transparent")
+
+        # 默认显示新版（简化版）
+        if self.is_simple_mode:
+            self._build_simple_ui()
+            self.simple_container.pack(fill="both", expand=True, padx=30, pady=(0, 20))
+        else:
+            self._build_advanced_ui()
+            self.advanced_container.pack(fill="both", expand=True, padx=30)
+
+    def _toggle_mode(self):
+        """切换新版/旧版"""
+        self.is_simple_mode = not self.is_simple_mode
+
+        if self.is_simple_mode:
+            # 切换到新版
+            self.advanced_container.pack_forget()
+            self.simple_container.pack(fill="both", expand=True, padx=30, pady=(0, 20))
+            self.mode_switch_btn.configure(text="切换到旧版")
+        else:
+            # 切换到旧版
+            self.simple_container.pack_forget()
+            self.advanced_container.pack(fill="both", expand=True, padx=30)
+            self.mode_switch_btn.configure(text="切换到新版")
+
+    def _build_simple_ui(self):
+        """新版简化UI：登录 + 模型选择 + 一键启动"""
+        # 登录状态
+        self.is_logged_in = False
+        self.api_token = ""
+        self.available_models = []
+
+        # 登录区域
+        self.login_frame = ctk.CTkFrame(self.simple_container)
+        self.login_frame.pack(fill="both", expand=True, pady=20)
+
+        ctk.CTkLabel(
+            self.login_frame, text="🔐 登录 api.yunjunet.cn",
+            font=ctk.CTkFont(size=18, weight="bold")
+        ).pack(pady=(30, 20))
+
+        ctk.CTkLabel(
+            self.login_frame, text="用户名",
+            font=ctk.CTkFont(size=13)
+        ).pack(anchor="w", padx=80, pady=(10, 2))
+
+        self.username_entry = ctk.CTkEntry(
+            self.login_frame, width=300, height=35,
+            placeholder_text="请输入用户名",
+            font=ctk.CTkFont(size=13)
+        )
+        self.username_entry.pack(pady=(0, 15))
+
+        ctk.CTkLabel(
+            self.login_frame, text="密码",
+            font=ctk.CTkFont(size=13)
+        ).pack(anchor="w", padx=80, pady=(0, 2))
+
+        self.password_entry = ctk.CTkEntry(
+            self.login_frame, width=300, height=35,
+            placeholder_text="请输入密码", show="●",
+            font=ctk.CTkFont(size=13)
+        )
+        self.password_entry.pack(pady=(0, 20))
+
+        self.login_btn = ctk.CTkButton(
+            self.login_frame, text="登录",
+            width=300, height=40,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            command=self._do_login
+        )
+        self.login_btn.pack(pady=(0, 10))
+
+        self.login_status_label = ctk.CTkLabel(
+            self.login_frame, text="",
+            font=ctk.CTkFont(size=12), text_color="#888"
+        )
+        self.login_status_label.pack(pady=(5, 20))
+
+        # 主界面区域（登录后显示）
+        self.main_frame = ctk.CTkFrame(self.simple_container)
+
+        ctk.CTkLabel(
+            self.main_frame, text="选择模型",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(anchor="w", padx=80, pady=(30, 5))
+
+        self.simple_model_var = ctk.StringVar(value="")
+        self.simple_model_menu = ctk.CTkOptionMenu(
+            self.main_frame, values=["请先登录"],
+            variable=self.simple_model_var,
+            width=300, height=35,
+            font=ctk.CTkFont(size=13)
+        )
+        self.simple_model_menu.pack(padx=80, pady=(0, 30))
+
+        self.simple_launch_btn = ctk.CTkButton(
+            self.main_frame, text="🚀 一键启动",
+            width=300, height=50,
+            font=ctk.CTkFont(size=16, weight="bold"),
+            fg_color="#2a7d3f", hover_color="#1a5a1a",
+            command=self._simple_launch
+        )
+        self.simple_launch_btn.pack(pady=(0, 20))
+
+        self.simple_status_label = ctk.CTkLabel(
+            self.main_frame, text="● 未启动",
+            font=ctk.CTkFont(size=13), text_color="#888"
+        )
+        self.simple_status_label.pack(pady=(5, 30))
+
+    def _do_login(self):
+        """执行登录"""
+        username = self.username_entry.get().strip()
+        password = self.password_entry.get().strip()
+
+        if not username or not password:
+            self.login_status_label.configure(text="❌ 请输入用户名和密码", text_color="#ff5555")
+            return
+
+        self.login_btn.configure(state="disabled", text="登录中...")
+        self.login_status_label.configure(text="正在登录...", text_color="#888")
+
+        threading.Thread(target=self._login_thread, args=(username, password), daemon=True).start()
+
+    def _login_thread(self, username, password):
+        """登录线程"""
+        import json
+        try:
+            # 调用登录API
+            login_url = f"{SIMPLE_BASE_URL}/auth/login"
+            login_data = json.dumps({"username": username, "password": password}).encode()
+            req = urllib.request.Request(
+                login_url,
+                data=login_data,
+                headers={"Content-Type": "application/json"}
+            )
+
+            with urllib.request.urlopen(req, timeout=10) as response:
+                result = json.loads(response.read().decode())
+
+                if result.get("success") or result.get("token"):
+                    self.api_token = result.get("token", "")
+                    self.is_logged_in = True
+
+                    # 获取模型列表
+                    self._fetch_models()
+
+                    # 切换到主界面
+                    self.after(0, self._show_main_ui)
+                else:
+                    error_msg = result.get("message", "登录失败")
+                    self.after(0, lambda: self._login_failed(error_msg))
+
+        except Exception as e:
+            self.after(0, lambda: self._login_failed(str(e)))
+
+    def _fetch_models(self):
+        """获取可用模型列表"""
+        try:
+            models_url = f"{SIMPLE_BASE_URL}/models"
+            req = urllib.request.Request(
+                models_url,
+                headers={"Authorization": f"Bearer {self.api_token}"}
+            )
+
+            with urllib.request.urlopen(req, timeout=10) as response:
+                result = json.loads(response.read().decode())
+                self.available_models = result.get("models", [])
+
+        except Exception as e:
+            self.available_models = ["deepseek-chat", "glm-4-flash", "claude-sonnet-4-6"]
+
+    def _show_main_ui(self):
+        """显示主界面"""
+        self.login_frame.pack_forget()
+        self.main_frame.pack(fill="both", expand=True, pady=20)
+
+        # 更新模型列表
+        if self.available_models:
+            self.simple_model_menu.configure(values=self.available_models)
+            self.simple_model_var.set(self.available_models[0])
+
+        self.login_status_label.configure(text="✅ 登录成功", text_color="#50c0ff")
+
+    def _login_failed(self, error_msg):
+        """登录失败"""
+        self.login_btn.configure(state="normal", text="登录")
+        self.login_status_label.configure(text=f"❌ {error_msg}", text_color="#ff5555")
+
+    def _simple_launch(self):
+        """新版一键启动"""
+        if not self.is_logged_in:
+            messagebox.showerror("未登录", "请先登录")
+            return
+
+        model_id = self.simple_model_var.get()
+        if not model_id:
+            messagebox.showerror("未选择模型", "请选择一个模型")
+            return
+
+        # 查找 openclaw
+        openclaw_cmd = shutil.which("openclaw")
+        if not openclaw_cmd:
+            candidates = [
+                os.path.expanduser("~\\AppData\\Roaming\\npm\\openclaw.cmd"),
+                os.path.expanduser("~\\AppData\\Roaming\\npm\\openclaw"),
+            ]
+            for c in candidates:
+                if os.path.exists(c):
+                    openclaw_cmd = c
+                    break
+
+        if not openclaw_cmd:
+            messagebox.showerror("未找到 openclaw", "请先安装 openclaw")
+            return
+
+        # 配置环境变量
+        env = os.environ.copy()
+        env["OPENAI_API_KEY"] = self.api_token
+        env["OPENAI_BASE_URL"] = SIMPLE_BASE_URL
+        env["MODEL"] = model_id
+
+        try:
+            self.process = subprocess.Popen(
+                [openclaw_cmd, "dashboard"],
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
+            self.simple_status_label.configure(text=f"● 运行中 | {model_id}", text_color="#50c0ff")
+            self.simple_launch_btn.configure(text="⏹ 停止", fg_color="#8b0000", command=self._simple_stop)
+        except Exception as e:
+            messagebox.showerror("启动失败", str(e))
+
+    def _simple_stop(self):
+        """停止服务"""
+        if self.process:
+            self.process.terminate()
+            self.process = None
+            self.simple_status_label.configure(text="● 已停止", text_color="#888")
+            self.simple_launch_btn.configure(
+                text="🚀 一键启动",
+                fg_color="#2a7d3f", hover_color="#1a5a1a",
+                command=self._simple_launch
+            )
+
+    def _build_advanced_ui(self):
+        """旧版完整UI"""
         # 主体
-        body = ctk.CTkFrame(self)
-        body.pack(fill="both", expand=True, padx=30)
+        body = ctk.CTkFrame(self.advanced_container)
+        body.pack(fill="both", expand=True)
 
         self._build_left(body)
         self._build_right(body)
 
         # 提示词预览
-        prompt_frame = ctk.CTkFrame(self, fg_color="transparent")
-        prompt_frame.pack(fill="x", padx=30, pady=(8, 0))
+        prompt_frame = ctk.CTkFrame(self.advanced_container, fg_color="transparent")
+        prompt_frame.pack(fill="x", padx=0, pady=(8, 0))
 
         ctk.CTkLabel(
             prompt_frame, text="场景提示词预览",
@@ -247,8 +531,8 @@ class OnePersonClaw(ctk.CTk):
         self.prompt_box.configure(state="disabled")
 
         # 费用估算
-        cost_frame = ctk.CTkFrame(self, fg_color="transparent")
-        cost_frame.pack(fill="x", padx=30, pady=(8, 0))
+        cost_frame = ctk.CTkFrame(self.advanced_container, fg_color="transparent")
+        cost_frame.pack(fill="x", padx=0, pady=(8, 0))
 
         ctk.CTkLabel(
             cost_frame, text="月费用估算",
@@ -270,13 +554,13 @@ class OnePersonClaw(ctk.CTk):
 
         # 状态栏
         self.status_label = ctk.CTkLabel(
-            self, text="● 未启动", text_color="#888",
+            self.advanced_container, text="● 未启动", text_color="#888",
             font=ctk.CTkFont(size=12)
         )
         self.status_label.pack(pady=(10, 4))
 
         # 按钮区
-        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
+        btn_frame = ctk.CTkFrame(self.advanced_container, fg_color="transparent")
         btn_frame.pack(pady=(0, 6))
 
         self.launch_btn = ctk.CTkButton(
@@ -322,8 +606,8 @@ class OnePersonClaw(ctk.CTk):
         ).pack(side="left", padx=6)
 
         # 聊天框
-        chat_frame = ctk.CTkFrame(self, fg_color="transparent")
-        chat_frame.pack(fill="x", padx=30, pady=(4, 0))
+        chat_frame = ctk.CTkFrame(self.advanced_container, fg_color="transparent")
+        chat_frame.pack(fill="x", padx=0, pady=(4, 0))
 
         ctk.CTkLabel(
             chat_frame, text="💬 与 OpenClaw 对话",
@@ -353,8 +637,8 @@ class OnePersonClaw(ctk.CTk):
         ).pack(side="left")
 
         # 工具箱快捷按钮
-        toolbox_frame = ctk.CTkFrame(self, fg_color="transparent")
-        toolbox_frame.pack(fill="x", padx=30, pady=(4, 0))
+        toolbox_frame = ctk.CTkFrame(self.advanced_container, fg_color="transparent")
+        toolbox_frame.pack(fill="x", padx=0, pady=(4, 0))
         ctk.CTkLabel(
             toolbox_frame, text="🔧 工具箱",
             font=ctk.CTkFont(size=12, weight="bold")
@@ -373,8 +657,8 @@ class OnePersonClaw(ctk.CTk):
             ).pack(side="left", padx=3)
 
         # 常用命令速查 TabView
-        cmd_tab = ctk.CTkTabview(self, height=130)
-        cmd_tab.pack(fill="x", padx=20, pady=(4, 0))
+        cmd_tab = ctk.CTkTabview(self.advanced_container, height=130)
+        cmd_tab.pack(fill="x", padx=0, pady=(4, 0))
         CMD_GROUPS = [
             ("模型", [
                 "openclaw models list",
