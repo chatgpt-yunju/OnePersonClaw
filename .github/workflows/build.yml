@@ -20,10 +20,8 @@ jobs:
       - name: Install dependencies
         run: pip install customtkinter pyinstaller
 
-    - name: Build EXE
-      run: |
-        pyinstaller --onefile --windowed --name "OnePersonClaw" --hidden-import=customtkinter main.py
-        continue-on-error: false
+      - name: Build EXE
+        run: pyinstaller --onefile --windowed --name "OnePersonClaw" --hidden-import=customtkinter main.py
 
       - name: Upload Windows EXE
         uses: actions/upload-artifact@v4
@@ -51,7 +49,6 @@ jobs:
           name: "OnePersonClaw ${{ github.ref_name }}"
           body: |
             ## OnePersonClaw ${{ github.ref_name }}
-
             一个人，一套爪子，干掉一个团队
 
             ### 下载
