@@ -373,7 +373,47 @@ class OnePersonClaw(ctk.CTk):
         self.install_log.configure(state="disabled")
 
     def _install_openclaw(self):
-        """可视化安装 openclaw"""
+        """显示安装命令弹窗"""
+        win = ctk.CTkToplevel(self)
+        win.title("安装 OpenClaw")
+        win.geometry("520x260")
+        win.grab_set()
+
+        ctk.CTkLabel(win, text="请在 PowerShell 中依次执行以下命令：",
+            font=ctk.CTkFont(size=14, weight="bold")).pack(pady=(20, 10))
+
+        cmds = [
+            "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser",
+            'powershell -c "irm https://openclaw.ai/install.ps1 | iex"'
+        ]
+
+        for cmd in cmds:
+            row = ctk.CTkFrame(win, fg_color="transparent")
+            row.pack(fill="x", padx=20, pady=5)
+
+            entry = ctk.CTkEntry(row, width=420, font=ctk.CTkFont(size=11, family="Courier"))
+            entry.insert(0, cmd)
+            entry.configure(state="readonly")
+            entry.pack(side="left", padx=(0, 10))
+
+            def _copy(c=cmd):
+                self.clipboard_clear()
+                self.clipboard_append(c)
+                self._append_install_log(f"已复制：{c}\n")
+
+            ctk.CTkButton(row, text="复制", width=60, height=28,
+                font=ctk.CTkFont(size=12),
+                command=_copy).pack(side="left")
+
+        ctk.CTkLabel(win, text="提示：复制后在 PowerShell 中右键粘贴执行",
+            font=ctk.CTkFont(size=11), text_color="#888").pack(pady=(15, 10))
+
+        ctk.CTkButton(win, text="关闭", width=100, height=32,
+            font=ctk.CTkFont(size=13),
+            command=win.destroy).pack(pady=(0, 15))
+
+    def _install_openclaw_old(self):
+        """可视化安装 openclaw（旧版）"""
         def _log(msg):
             self.after(0, lambda m=msg: self._append_install_log(m))
 
