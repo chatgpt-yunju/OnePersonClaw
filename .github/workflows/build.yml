@@ -20,13 +20,9 @@ jobs:
       - name: Install dependencies
         run: pip install customtkinter pyinstaller
 
-      - name: Build EXE
-        run: |
-          pyinstaller --onefile --windowed `
-            --name "OnePersonClaw" `
-            --hidden-import=customtkinter `
-        --hidden-import=CTkPopupMenu `
-        main.py
+    - name: Build EXE
+      run: |
+        pyinstaller --onefile --windowed --name "OnePersonClaw" --hidden-import=customtkinter main.py
         continue-on-error: false
 
       - name: Upload Windows EXE
