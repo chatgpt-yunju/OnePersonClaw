@@ -344,18 +344,18 @@ class OnePersonClaw(ctk.CTk):
                      text_color="#666").pack(pady=(8, 4))
 
         # 常用命令按钮网格
-		CMDS = [
-			("安装Git", "#7a4a00", "#a06000", lambda: webbrowser.open("https://npmmirror.com/mirrors/git-for-windows/")),
-			("安装Node", "#7a4a00", "#a06000", lambda: webbrowser.open("https://npmmirror.com/mirrors/node/")),
-			("安装OpenClaw", "#7a4a00", "#a06000", self._install_openclaw),
-			("认识OpenClaw", "#4a2a6a", "#2a1a4a", lambda: webbrowser.open("https://es6t5xbd8k.feishu.cn/docx/NbEHd2jT1oogDpxziAjc3rLyn6g")),
-			("停止网关", "#555", "#333", self._simple_stop),
-			("检查健康", "#2a4a6a", "#1a2a4a", lambda: self._run_cmd_window("openclaw health")),
-			("查看日志", "#2a4a6a", "#1a2a4a", lambda: self._run_cmd_window("openclaw logs")),
-			("配置向导", "#4a2a6a", "#2a1a4a", lambda: self._run_cmd_window("openclaw configure")),
-			("onboard", "#4a2a6a", "#2a1a4a", lambda: self._run_cmd_window("openclaw onboard")),
-			("doctor", "#2a4a2a", "#1a2a1a", lambda: self._run_cmd_window("openclaw doctor")),
-		]
+        CMDS = [
+            ("安装Git", "#7a4a00", "#a06000", lambda: webbrowser.open("https://npmmirror.com/mirrors/git-for-windows/")),
+            ("安装Node", "#7a4a00", "#a06000", lambda: webbrowser.open("https://npmmirror.com/mirrors/node/")),
+            ("安装OpenClaw", "#7a4a00", "#a06000", self._install_openclaw),
+            ("认识OpenClaw", "#4a2a6a", "#2a1a4a", lambda: webbrowser.open("https://es6t5xbd8k.feishu.cn/docx/NbEHd2jT1oogDpxziAjc3rLyn6g")),
+            ("停止网关", "#555", "#333", self._simple_stop),
+            ("检查健康", "#2a4a6a", "#1a2a4a", lambda: self._run_cmd_window("openclaw health")),
+            ("查看日志", "#2a4a6a", "#1a2a4a", lambda: self._run_cmd_window("openclaw logs")),
+            ("配置向导", "#4a2a6a", "#2a1a4a", lambda: self._run_cmd_window("openclaw configure")),
+            ("onboard", "#4a2a6a", "#2a1a4a", lambda: self._run_cmd_window("openclaw onboard")),
+            ("doctor", "#2a4a2a", "#1a2a1a", lambda: self._run_cmd_window("openclaw doctor")),
+        ]
 
         grid = ctk.CTkFrame(parent, fg_color="transparent")
         grid.pack(fill="x", padx=20, pady=(0, 10))
